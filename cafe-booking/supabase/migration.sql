@@ -26,22 +26,12 @@ create table public.profiles (
 
 alter table public.profiles enable row level security;
 
--- Все авторизованные могут читать профили (нужно, чтобы показывать
--- имя создавшего бронь сотрудника всем коллегам).
-create policy "read all profiles" on public.profiles
-  for select to authenticated using (true);
-
--- Менять профили (роли, имена) может только админ.
-create policy "admin manages profiles" on public.profiles
-  for all to authenticated
-  using (public.current_role() = 'admin')
-  with check (public.current_role() = 'admin');
-
 -- ============================================================
---  ФУНКЦИЯ current_role(): возвращает роль текущего пользователя.
---  SECURITY DEFINER + фиксированный search_path — читает profiles
+--  ФУНКЦИИ-ХЕЛПЕРЫ. Определяем ДО политик, которые на них ссылаются.
+--  SECURITY DEFINER + фиксированный search_path — читают profiles
 --  в обход RLS, чтобы политики не уходили в рекурсию.
 -- ============================================================
+-- current_role(): роль текущего пользователя.
 create or replace function public.current_role()
 returns text
 language sql
@@ -52,11 +42,8 @@ as $$
   select role from public.profiles where id = auth.uid();
 $$;
 
--- ============================================================
---  ФУНКЦИЯ current_is_active(): активен ли текущий пользователь.
---  Используется в RLS броней — деактивированный сотрудник не бронирует.
---  SECURITY DEFINER, чтобы читать profiles в обход RLS.
--- ============================================================
+-- current_is_active(): активен ли текущий пользователь.
+-- Используется в RLS броней — деактивированный сотрудник не бронирует.
 create or replace function public.current_is_active()
 returns boolean
 language sql
@@ -69,6 +56,17 @@ as $$
     false
   );
 $$;
+
+-- Все авторизованные могут читать профили (нужно, чтобы показывать
+-- имя создавшего бронь сотрудника всем коллегам).
+create policy "read all profiles" on public.profiles
+  for select to authenticated using (true);
+
+-- Менять профили (роли, имена, активность) может только админ.
+create policy "admin manages profiles" on public.profiles
+  for all to authenticated
+  using (public.current_role() = 'admin')
+  with check (public.current_role() = 'admin');
 
 -- ============================================================
 --  АВТО-СОЗДАНИЕ ПРОФИЛЯ при регистрации нового пользователя.
@@ -152,15 +150,17 @@ create table public.bookings (
   has_preorder  boolean not null default false,
   preorder_text text,
   comment       text,
-  -- Служебное
-  created_by    uuid references auth.users(id) default auth.uid(),
+  -- Служебное. created_by ссылается на profiles (а не напрямую на auth.users),
+  -- чтобы PostgREST мог встраивать имя автора: creator:profiles!bookings_created_by_fkey.
+  -- profiles.id сам ссылается на auth.users.id — целостность к auth сохраняется.
+  created_by    uuid references public.profiles(id) on delete set null default auth.uid(),
   created_at    timestamptz default now(),
   deleted_at    timestamptz default null,  -- soft delete
   -- Диапазон времени для анти-овербукинга (generated)
   time_range tsrange generated always as (
     tsrange(
       (booking_date + start_time)::timestamp,
-      (booking_date + start_time + (duration_min || ' minutes')::interval)::timestamp,
+      (booking_date + start_time + (duration_min * interval '1 minute'))::timestamp,
       '[)'
     )
   ) stored
@@ -190,7 +190,8 @@ alter table public.bookings
 --  через update — это должно быть новой бронью.
 -- ============================================================
 create or replace function public.guard_booking_update()
-returns trigger language plpgsql as $$
+returns trigger language plpgsql
+security definer set search_path = public as $$
 begin
   if new.table_id <> old.table_id or new.booking_date <> old.booking_date then
     raise exception 'Перенос на другой стол или дату — удалите и создайте новую бронь';
@@ -280,9 +281,24 @@ create policy "staff update bookings" on public.bookings
 -- (Если когда-то понадобится чистка старых данных — делай вручную как админ.)
 
 -- ============================================================
+--  БЕЗОПАСНОСТЬ: триггерные функции не нужны напрямую через REST/RPC.
+--  Триггеры продолжают работать (выполняются в контексте таблицы),
+--  а прямой вызов /rest/v1/rpc/... для них закрыт.
+--  current_role()/current_is_active() НЕ трогаем — их вызывает RLS.
+-- ============================================================
+revoke execute on function public.guard_booking_update() from anon, authenticated;
+revoke execute on function public.guard_soft_delete()   from anon, authenticated;
+revoke execute on function public.audit_booking()        from anon, authenticated;
+revoke execute on function public.handle_new_user()      from anon, authenticated;
+
+-- ============================================================
 --  REALTIME
+--  bookings — занятость зала; tables — правка схемы админом;
+--  profiles — список сотрудников и их активность в панели админа.
 -- ============================================================
 alter publication supabase_realtime add table public.bookings;
+alter publication supabase_realtime add table public.tables;
+alter publication supabase_realtime add table public.profiles;
 
 -- ============================================================
 --  ПОСЛЕ МИГРАЦИИ:
