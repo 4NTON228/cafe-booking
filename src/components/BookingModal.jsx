@@ -10,6 +10,26 @@ const DURATIONS = [
   { label: '4 часа', value: 240 },
 ]
 
+// Время окончания брони. В БД хранится только start_time + duration_min
+// (отдельной колонки end_time нет), поэтому считаем на клиенте.
+function endTime(startTime, durationMin) {
+  const [h, m] = startTime.slice(0, 5).split(':').map(Number)
+  const total = h * 60 + m + Number(durationMin || 0)
+  const eh = Math.floor(total / 60) % 24
+  const em = total % 60
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${pad(eh)}:${pad(em)}`
+}
+
+// Когда бронь была создана сотрудником: дата + время.
+function formatCreated(ts) {
+  if (!ts) return ''
+  return new Date(ts).toLocaleString('ru-RU', {
+    day: 'numeric', month: 'short',
+    hour: '2-digit', minute: '2-digit',
+  })
+}
+
 // Клиентская валидация — для быстрого отклика.
 // Настоящая защита в БД (CHECK + exclusion constraint), это лишь UX.
 function validate(form) {
@@ -134,7 +154,7 @@ export default function BookingModal({
             <div key={b.id} className="booking-row">
               <div className="booking-info">
                 <span className="booking-time">
-                  {b.start_time.slice(0, 5)}–{b.end_time.slice(0, 5)}
+                  {b.start_time.slice(0, 5)}–{endTime(b.start_time, b.duration_min)}
                 </span>
                 <span className="booking-name">{b.guest_name}</span>
                 <span className="booking-meta">
@@ -146,8 +166,12 @@ export default function BookingModal({
                   </span>
                 )}
                 {b.comment && <span className="booking-comment">{b.comment}</span>}
-                {b.creator?.full_name && (
-                  <span className="booking-author">Забронировал: {b.creator.full_name}</span>
+                {(b.creator?.full_name || b.created_at) && (
+                  <span className="booking-author">
+                    Забронировал
+                    {b.creator?.full_name ? `: ${b.creator.full_name}` : ''}
+                    {b.created_at ? ` · ${formatCreated(b.created_at)}` : ''}
+                  </span>
                 )}
               </div>
               <div className="booking-actions">
