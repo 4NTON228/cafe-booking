@@ -68,6 +68,33 @@ h1, h2, h3 {
 .field:focus { outline: 2px solid var(--gold); border-color: var(--gold); }
 
 .error-text { color: var(--danger); font-size: 14px; margin-top: 12px; }
+.notice-text { color: var(--gold-deep); font-size: 14px; margin-top: 12px; }
+
+/* Ссылка-кнопка (напр. «Забыли пароль?») */
+.link-btn {
+  display: block;
+  margin: 16px auto 0;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.link-btn:hover { color: var(--gold-deep); }
+
+/* Экран ошибки подключения */
+.conn-text { font-size: 14px; line-height: 1.5; margin: 12px 0; color: var(--ink); }
+.conn-list { margin: 8px 0; padding-left: 20px; }
+.conn-list code,
+.conn-text code {
+  background: var(--free);
+  border: 1px solid var(--free-border);
+  border-radius: 5px;
+  padding: 1px 5px;
+  font-size: 13px;
+}
 
 .btn-primary {
   width: 100%;
@@ -167,6 +194,19 @@ h1, h2, h3 {
 .dot { width: 13px; height: 13px; border-radius: 50%; display: inline-block; }
 .dot.free { background: var(--free); border: 1px solid var(--free-border); }
 .dot.booked { background: var(--booked); border: 1px solid var(--booked-border); }
+
+/* Индикатор realtime-подключения */
+.rt-status { font-size: 13px; }
+.rt-dot {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+  background: var(--muted);
+}
+.rt-status.live .rt-dot { background: #4a8a4a; box-shadow: 0 0 0 3px rgba(74,138,74,0.18); }
+.rt-status.connecting .rt-dot { background: var(--gold); }
+.rt-status.offline { color: var(--danger); }
+.rt-status.offline .rt-dot { background: var(--danger); }
 
 /* ===== Схема зала ===== */
 .floor-plan {
@@ -316,6 +356,27 @@ h1, h2, h3 {
   margin-top: 18px;
 }
 .form-buttons .btn-primary { margin-top: 0; }
+
+/* ===== Панель сотрудников ===== */
+.staff-list { margin-top: 4px; }
+.staff-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin-bottom: 8px;
+  background: #fff;
+  flex-wrap: wrap;
+}
+.staff-row.inactive { opacity: 0.6; }
+.staff-info { display: flex; flex-direction: column; gap: 2px; }
+.staff-name { font-weight: 700; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.staff-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.role-badge.muted { background: var(--muted); }
+.btn-ghost.sm:disabled { opacity: 0.5; cursor: default; }
 
 /* ===== Адаптив ===== */
 @media (max-width: 700px) {

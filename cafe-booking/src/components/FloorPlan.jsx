@@ -11,9 +11,15 @@ export default function FloorPlan({ isAdmin }) {
   const [activeTable, setActiveTable] = useState(null)
 
   const {
-    tables, bookings, loading,
+    tables, bookings, loading, realtimeStatus,
     addBooking, updateBooking, deleteBooking,
   } = useBookings(date)
+
+  const rt = {
+    live: { cls: 'live', text: 'Обновления в реальном времени' },
+    connecting: { cls: 'connecting', text: 'Подключение…' },
+    offline: { cls: 'offline', text: 'Нет связи — обновления приостановлены' },
+  }[realtimeStatus] || { cls: 'connecting', text: 'Подключение…' }
 
   const bookingsFor = (tableId) =>
     bookings.filter((b) => b.table_id === tableId)
@@ -25,6 +31,9 @@ export default function FloorPlan({ isAdmin }) {
       <div className="legend">
         <span><i className="dot free" /> Свободно</span>
         <span><i className="dot booked" /> Забронировано</span>
+        <span className={`rt-status ${rt.cls}`} title={rt.text}>
+          <i className="rt-dot" /> {rt.text}
+        </span>
       </div>
 
       {loading ? (

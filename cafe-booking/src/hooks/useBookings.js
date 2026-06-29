@@ -1,26 +1,33 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../supabaseClient'
 
 // Хук данных: столы + активные брони на выбранную дату + realtime.
 // К броням подтягиваем имя создавшего сотрудника (из profiles).
+// realtimeStatus отражает состояние подключения, чтобы показать индикатор.
 export function useBookings(date) {
   const [tables, setTables] = useState([])
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
+  // 'connecting' | 'live' | 'offline'
+  const [realtimeStatus, setRealtimeStatus] = useState('connecting')
 
-  // Столы грузим один раз
-  useEffect(() => {
+  // Дату держим в ref, чтобы realtime-колбэк всегда брал актуальную,
+  // не пересоздавая подписку при каждом переключении дня.
+  const dateRef = useRef(date)
+  dateRef.current = date
+
+  // Столы грузим один раз и держим в realtime (админ может править схему).
+  const fetchTables = () =>
     supabase.from('tables').select('*').order('number')
       .then(({ data }) => setTables(data || []))
-  }, [])
 
+  useEffect(() => { fetchTables() }, [])
+
+  // Перезагрузка броней на выбранную дату при смене даты.
   useEffect(() => {
     let active = true
-
     const fetchBookings = async () => {
       setLoading(true)
-      // join к profiles, чтобы показать имя сотрудника на брони.
-      // Только активные брони (deleted_at is null).
       const { data } = await supabase
         .from('bookings')
         .select('*, creator:profiles!bookings_created_by_fkey(full_name)')
@@ -33,20 +40,46 @@ export function useBookings(date) {
       }
     }
     fetchBookings()
+    return () => { active = false }
+  }, [date])
 
-    // Realtime: при любом изменении броней перезапрашиваем список.
+  // Перезапросить брони на текущую (по ref) дату — для realtime-колбэков.
+  const refetchBookings = async () => {
+    const { data } = await supabase
+      .from('bookings')
+      .select('*, creator:profiles!bookings_created_by_fkey(full_name)')
+      .eq('booking_date', dateRef.current)
+      .is('deleted_at', null)
+      .order('start_time')
+    setBookings(data || [])
+  }
+
+  // Realtime: одна подписка на всё время жизни компонента.
+  // При любом изменении броней/столов перезапрашиваем данные.
+  useEffect(() => {
     const channel = supabase
-      .channel('bookings-changes')
+      .channel('floor-changes')
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'bookings' },
-        () => fetchBookings())
-      .subscribe()
+        () => refetchBookings())
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'tables' },
+        () => fetchTables())
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          setRealtimeStatus('live')
+          // После (пере)подключения добираем то, что могли пропустить.
+          refetchBookings()
+          fetchTables()
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          setRealtimeStatus('offline')
+        } else if (status === 'CLOSED') {
+          setRealtimeStatus('connecting')
+        }
+      })
 
-    return () => {
-      active = false
-      supabase.removeChannel(channel)
-    }
-  }, [date])
+    return () => { supabase.removeChannel(channel) }
+  }, [])
 
   // created_by НЕ передаём — БД проставит сама (default auth.uid()).
   const addBooking = (booking) =>
@@ -61,5 +94,8 @@ export function useBookings(date) {
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', id)
 
-  return { tables, bookings, loading, addBooking, updateBooking, deleteBooking }
+  return {
+    tables, bookings, loading, realtimeStatus,
+    addBooking, updateBooking, deleteBooking,
+  }
 }

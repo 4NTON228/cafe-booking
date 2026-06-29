@@ -1,17 +1,46 @@
+import { useState } from 'react'
+import { isConfigured, missingEnv } from './supabaseClient'
 import { useAuth } from './hooks/useAuth'
 import Login from './components/Login'
+import SetPassword from './components/SetPassword'
+import Blocked from './components/Blocked'
 import FloorPlan from './components/FloorPlan'
+import StaffPanel from './components/StaffPanel'
+import ConnectionError from './components/ConnectionError'
 
 export default function App() {
-  const { session, profile, isAdmin, loading, signOut } = useAuth()
+  // Нет переменных окружения — показываем инструкцию вместо краша.
+  if (!isConfigured) {
+    return <ConnectionError missing={missingEnv} />
+  }
+
+  return <AuthedApp />
+}
+
+function AuthedApp() {
+  const {
+    session, profile, isAdmin, isActive, loading, recovery,
+    signOut, updatePassword,
+  } = useAuth()
+  const [staffOpen, setStaffOpen] = useState(false)
 
   if (loading) {
     return <div className="center-screen">Загрузка…</div>
   }
 
-  // Не вошёл — показываем форму входа (регистрации нет, аккаунты создаёт владелец)
+  // Пользователь пришёл по ссылке из письма — задаёт пароль (активация/сброс).
+  if (recovery) {
+    return <SetPassword onSubmit={updatePassword} />
+  }
+
+  // Не вошёл — форма входа (регистрации нет, аккаунты создаёт владелец).
   if (!session) {
     return <Login />
+  }
+
+  // Аккаунт деактивирован админом — бронировать нельзя.
+  if (!isActive) {
+    return <Blocked name={profile?.full_name} onSignOut={signOut} />
   }
 
   return (
@@ -23,10 +52,23 @@ export default function App() {
             {profile?.full_name || session.user.email}
             {isAdmin && <span className="role-badge">админ</span>}
           </span>
+          {isAdmin && (
+            <button className="btn-ghost" onClick={() => setStaffOpen(true)}>
+              Сотрудники
+            </button>
+          )}
           <button className="btn-ghost" onClick={signOut}>Выйти</button>
         </div>
       </header>
+
       <FloorPlan isAdmin={isAdmin} />
+
+      {staffOpen && (
+        <StaffPanel
+          currentUserId={session.user.id}
+          onClose={() => setStaffOpen(false)}
+        />
+      )}
     </div>
   )
 }
