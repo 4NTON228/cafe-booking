@@ -1,18 +1,22 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabaseClient'
 
-// Хук авторизации: следит за сессией и подгружает профиль (имя + роль).
+// Хук авторизации: следит за сессией, подгружает профиль (имя + роль + активность),
+// и обслуживает активацию аккаунта через ссылку восстановления пароля.
 export function useAuth() {
   const [session, setSession] = useState(null)
-  const [profile, setProfile] = useState(null) // { full_name, role }
+  const [profile, setProfile] = useState(null) // { full_name, role, is_active }
   const [loading, setLoading] = useState(true)
+  // recovery=true, когда пользователь пришёл по ссылке из письма
+  // (приглашение / сброс пароля) — показываем экран установки пароля.
+  const [recovery, setRecovery] = useState(false)
 
   // Загрузить профиль текущего пользователя
   const loadProfile = async (userId) => {
     if (!userId) { setProfile(null); return }
     const { data } = await supabase
       .from('profiles')
-      .select('full_name, role')
+      .select('full_name, role, is_active')
       .eq('id', userId)
       .single()
     setProfile(data || null)
@@ -26,7 +30,9 @@ export function useAuth() {
     })
 
     const { data: listener } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
+        // Ссылка восстановления/приглашения — переводим в режим установки пароля.
+        if (event === 'PASSWORD_RECOVERY') setRecovery(true)
         setSession(session)
         await loadProfile(session?.user?.id)
       }
@@ -40,7 +46,25 @@ export function useAuth() {
 
   const signOut = () => supabase.auth.signOut()
 
-  const isAdmin = profile?.role === 'admin'
+  // Отправить письмо со ссылкой для установки/сброса пароля.
+  const sendPasswordReset = (email) =>
+    supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin,
+    })
 
-  return { session, profile, isAdmin, loading, signIn, signOut }
+  // Установить новый пароль (в режиме recovery после перехода по ссылке).
+  const updatePassword = async (password) => {
+    const result = await supabase.auth.updateUser({ password })
+    if (!result.error) setRecovery(false)
+    return result
+  }
+
+  const isAdmin = profile?.role === 'admin'
+  // Если профиль ещё не загружен — считаем активным, чтобы не мигал экран блокировки.
+  const isActive = profile ? profile.is_active !== false : true
+
+  return {
+    session, profile, isAdmin, isActive, loading, recovery,
+    signIn, signOut, sendPasswordReset, updatePassword,
+  }
 }

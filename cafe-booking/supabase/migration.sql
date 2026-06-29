@@ -18,7 +18,10 @@ create extension if not exists btree_gist;
 create table public.profiles (
   id           uuid primary key references auth.users(id) on delete cascade,
   full_name    text not null default 'Сотрудник',
-  role         text not null default 'staff' check (role in ('admin', 'staff'))
+  role         text not null default 'staff' check (role in ('admin', 'staff')),
+  -- Активность аккаунта: деактивированный сотрудник может войти, но бронировать
+  -- не может (проверка в RLS). Включает/выключает админ из панели «Сотрудники».
+  is_active    boolean not null default true
 );
 
 alter table public.profiles enable row level security;
@@ -47,6 +50,24 @@ set search_path = public
 stable
 as $$
   select role from public.profiles where id = auth.uid();
+$$;
+
+-- ============================================================
+--  ФУНКЦИЯ current_is_active(): активен ли текущий пользователь.
+--  Используется в RLS броней — деактивированный сотрудник не бронирует.
+--  SECURITY DEFINER, чтобы читать profiles в обход RLS.
+-- ============================================================
+create or replace function public.current_is_active()
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select coalesce(
+    (select is_active from public.profiles where id = auth.uid()),
+    false
+  );
 $$;
 
 -- ============================================================
@@ -243,12 +264,17 @@ alter table public.bookings enable row level security;
 create policy "read bookings" on public.bookings
   for select to authenticated using (true);
 
+-- Создавать брони может только активный сотрудник, и только от своего имени.
 create policy "staff insert bookings" on public.bookings
   for insert to authenticated
-  with check (created_by = auth.uid());
+  with check (created_by = auth.uid() and public.current_is_active());
 
+-- Редактировать брони может только активный сотрудник
+-- (доп. ограничения — в триггерах guard_* выше).
 create policy "staff update bookings" on public.bookings
-  for update to authenticated using (true) with check (true);
+  for update to authenticated
+  using (public.current_is_active())
+  with check (public.current_is_active());
 
 -- Физический delete не разрешаем никому — только soft delete через update.
 -- (Если когда-то понадобится чистка старых данных — делай вручную как админ.)
