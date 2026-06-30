@@ -5,6 +5,7 @@ import TableShape from './TableShape'
 import BookingModal from './BookingModal'
 import BookingsList from './BookingsList'
 import DatePicker from './DatePicker'
+import { isActiveBooking } from '../lib/status'
 
 const today = () => new Date().toISOString().slice(0, 10)
 
@@ -35,7 +36,7 @@ export default function FloorPlan({ isAdmin }) {
 
   const {
     tables, bookings, loading, realtimeStatus,
-    addBooking, updateBooking, deleteBooking,
+    addBooking, updateBooking, deleteBooking, setBookingStatus,
   } = useBookings(date)
 
   // Для раздела «Список броней» — все предстоящие брони (любые даты).
@@ -47,12 +48,16 @@ export default function FloorPlan({ isAdmin }) {
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
+    // Вписываем всю схему по ширине контейнера — так зал виден целиком,
+    // без обрезания справа и без гигантских столов на телефоне.
     const update = () => setScale(Math.min(1, el.clientWidth / PLAN_W))
     update()
     const ro = new ResizeObserver(update)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [view, loading])
+    // tables.length важен: схема монтируется только когда столы загрузились,
+    // и ref появляется именно тогда — иначе масштаб остаётся 1 (столы гигантские).
+  }, [view, loading, tables.length])
 
   const rt = {
     live: { cls: 'live', text: 'Обновления в реальном времени' },
@@ -62,6 +67,15 @@ export default function FloorPlan({ isAdmin }) {
 
   const bookingsFor = (tableId) =>
     bookings.filter((b) => b.table_id === tableId)
+
+  // Для раскраски/счётчика на столе учитываем только активные брони
+  // (отменённые освобождают стол).
+  const activeCountFor = (tableId) =>
+    bookings.filter((b) => b.table_id === tableId && isActiveBooking(b)).length
+
+  // Сводка по выбранному дню: сколько активных броней и сколько гостей всего.
+  const activeToday = bookings.filter(isActiveBooking)
+  const guestsToday = activeToday.reduce((sum, b) => sum + (b.guests_count || 0), 0)
 
   // Показываем только столы, для которых задана позиция в раскладке (11 убран).
   const placedTables = tables.filter((t) => LAYOUT[t.number])
@@ -93,6 +107,14 @@ export default function FloorPlan({ isAdmin }) {
         </span>
       </div>
 
+      {view === 'plan' && tables.length > 0 && (
+        <div className="day-summary">
+          {activeToday.length > 0
+            ? `Броней: ${activeToday.length} · гостей: ${guestsToday}`
+            : 'На этот день броней нет'}
+        </div>
+      )}
+
       {tables.length === 0 ? (
         <div className="floor-loading">Загрузка зала…</div>
       ) : view === 'plan' ? (
@@ -116,7 +138,7 @@ export default function FloorPlan({ isAdmin }) {
                   table={t}
                   x={LAYOUT[t.number].x}
                   y={LAYOUT[t.number].y}
-                  bookingsCount={bookingsFor(t.id).length}
+                  bookingsCount={activeCountFor(t.id)}
                   onClick={setActiveTable}
                 />
               ))}
@@ -141,6 +163,7 @@ export default function FloorPlan({ isAdmin }) {
           onAdd={addBooking}
           onUpdate={updateBooking}
           onDelete={deleteBooking}
+          onSetStatus={setBookingStatus}
         />
       )}
     </div>

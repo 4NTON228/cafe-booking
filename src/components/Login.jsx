@@ -51,6 +51,7 @@ export default function Login() {
         <input
           className="field"
           type="email"
+          autoComplete="username"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && (isReset ? handleReset() : handleSignIn())}
@@ -63,6 +64,7 @@ export default function Login() {
               <input
                 className="field"
                 type={showPw ? 'text' : 'password'}
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSignIn()}

@@ -94,8 +94,12 @@ export function useBookings(date) {
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', id)
 
+  // Смена статуса брони (пришли / не пришли / отменена / ожидается).
+  const setBookingStatus = (id, status) =>
+    supabase.from('bookings').update({ status }).eq('id', id)
+
   return {
     tables, bookings, loading, realtimeStatus,
-    addBooking, updateBooking, deleteBooking,
+    addBooking, updateBooking, deleteBooking, setBookingStatus,
   }
 }

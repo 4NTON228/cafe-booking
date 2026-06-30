@@ -1,4 +1,7 @@
+import { useState } from 'react'
 import { timeRange, formatCreated } from '../lib/time'
+import { STATUS, statusOf } from '../lib/status'
+import PhoneLink from './PhoneLink'
 
 // Заголовок даты: «Пятница, 10 июля».
 function formatDateHead(dateStr) {
@@ -10,15 +13,21 @@ function formatDateHead(dateStr) {
 // Список всех предстоящих броней, сгруппированный по датам.
 // onSelect(table, bookingDate) — открыть стол на нужную дату.
 export default function BookingsList({ bookings, tables, onSelect }) {
-  if (bookings.length === 0) {
-    return <div className="booking-empty">Предстоящих броней нет</div>
-  }
+  const [query, setQuery] = useState('')
 
   const tableById = Object.fromEntries(tables.map((t) => [t.id, t]))
 
+  // Поиск по имени гостя и телефону (без учёта регистра).
+  const q = query.trim().toLowerCase()
+  const filtered = q
+    ? bookings.filter((b) =>
+        (b.guest_name || '').toLowerCase().includes(q) ||
+        (b.phone || '').toLowerCase().includes(q))
+    : bookings
+
   // Группируем по дате (bookings уже отсортированы по дате и времени).
   const groups = []
-  for (const b of bookings) {
+  for (const b of filtered) {
     let g = groups[groups.length - 1]
     if (!g || g.date !== b.booking_date) {
       g = { date: b.booking_date, items: [] }
@@ -29,23 +38,44 @@ export default function BookingsList({ bookings, tables, onSelect }) {
 
   return (
     <div className="day-list">
-      {groups.map((g) => (
+      <input
+        className="field search-field"
+        type="search"
+        placeholder="Поиск по имени или телефону"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+      />
+
+      {groups.length === 0 ? (
+        <div className="booking-empty">
+          {q ? 'Ничего не найдено' : 'Предстоящих броней нет'}
+        </div>
+      ) : groups.map((g) => (
         <div key={g.date}>
           <div className="day-date-head">{formatDateHead(g.date)}</div>
           {g.items.map((b) => {
             const table = tableById[b.table_id]
+            const st = statusOf(b)
+            const open = () => table && onSelect(table, b.booking_date)
             return (
-              <button
+              <div
                 key={b.id}
-                className="day-row"
-                onClick={() => table && onSelect(table, b.booking_date)}
+                className={`day-row ${st === 'cancelled' ? 'is-cancelled' : ''}`}
+                role="button"
+                tabIndex={0}
+                onClick={open}
+                onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && open()}
               >
                 <span className="day-table">№{table?.number ?? '—'}</span>
                 <span className="day-main">
-                  <span className="day-time">{timeRange(b.start_time, b.duration_min)}</span>
+                  <span className="day-time">
+                    {timeRange(b.start_time, b.duration_min)}
+                    <span className={`status-chip ${STATUS[st].cls}`}>{STATUS[st].label}</span>
+                  </span>
                   <span className="day-guest">{b.guest_name}</span>
                   <span className="day-meta">
-                    {b.guests_count} чел.{b.phone ? ` · ${b.phone}` : ''}
+                    {b.guests_count} чел.
+                    {b.phone && <> · <PhoneLink phone={b.phone} /></>}
                   </span>
                   {b.has_preorder && (
                     <span className="day-preorder">Предзаказ: {b.preorder_text}</span>
@@ -56,7 +86,7 @@ export default function BookingsList({ bookings, tables, onSelect }) {
                     {b.created_at ? ` · ${formatCreated(b.created_at)}` : ''}
                   </span>
                 </span>
-              </button>
+              </div>
             )
           })}
         </div>

@@ -11,6 +11,28 @@
   --booked-border: #b07b54;
   --danger: #a4452f;
   --line: #ddceb0;
+  --field-bg: #fff;
+  --row-bg: #fff;
+  color-scheme: light;
+}
+
+/* Тёмная тема: тёплые приглушённые тона, чтобы сохранить «ламповый» вид кафе. */
+:root[data-theme="dark"] {
+  --bg: #1d1812;
+  --surface: #2a2319;
+  --ink: #ece2cf;
+  --muted: #a8997a;
+  --gold: #cba85a;
+  --gold-deep: #d8b765;
+  --free: #3a3022;
+  --free-border: #574a32;
+  --booked: #6b4a36;
+  --booked-border: #8a5c40;
+  --danger: #e08469;
+  --line: #423827;
+  --field-bg: #221c14;
+  --row-bg: #241e15;
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
@@ -65,7 +87,7 @@ h1, h2, h3 {
   padding: 11px 13px;
   border: 1px solid var(--free-border);
   border-radius: 9px;
-  background: #fff;
+  background: var(--field-bg);
   color: var(--ink);
   font-family: inherit;
   font-size: 15px;
@@ -263,6 +285,10 @@ h1, h2, h3 {
   border: 2px solid;
   cursor: pointer;
   font-family: inherit;
+  /* Явный цвет обязателен: иначе iOS красит текст кнопки системным синим. */
+  color: var(--ink);
+  -webkit-appearance: none;
+  appearance: none;
   transition: transform 0.12s ease;
 }
 .table-shape.round { border-radius: 50%; }
@@ -275,6 +301,7 @@ h1, h2, h3 {
   font-size: 24px;
   font-weight: 700;
   line-height: 1;
+  color: var(--gold-deep);
 }
 .table-cap { font-size: 11px; color: var(--muted); margin-top: 2px; }
 .table-badge {
@@ -338,7 +365,7 @@ h1, h2, h3 {
   border: 1px solid var(--line);
   border-radius: 10px;
   margin-bottom: 8px;
-  background: #fff;
+  background: var(--row-bg);
 }
 .booking-info { display: flex; flex-direction: column; gap: 2px; }
 .booking-time {
@@ -391,7 +418,7 @@ h1, h2, h3 {
   border: 1px solid var(--line);
   border-radius: 10px;
   margin-bottom: 8px;
-  background: #fff;
+  background: var(--row-bg);
   flex-wrap: wrap;
 }
 .staff-row.inactive { opacity: 0.6; }
@@ -438,7 +465,7 @@ h1, h2, h3 {
   border: 1px solid var(--line);
   border-radius: 12px;
   margin-bottom: 10px;
-  background: #fff;
+  background: var(--row-bg);
   font-family: inherit;
   cursor: pointer;
 }
@@ -479,6 +506,73 @@ h1, h2, h3 {
   border-bottom: 1px solid var(--line);
 }
 .day-date-head:first-child { margin-top: 4px; }
+
+/* ===== Кнопка-иконка (тема) ===== */
+.icon-btn {
+  width: 38px;
+  padding: 8px 0;
+  text-align: center;
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* ===== Сводка по дню ===== */
+.day-summary {
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+  margin: -8px 0 18px;
+}
+
+/* Предупреждение в форме (напр. гостей больше вместимости) */
+.field-warn {
+  display: block;
+  color: var(--gold-deep);
+  font-size: 12px;
+  margin-top: 5px;
+}
+
+/* ===== Статус брони ===== */
+.status-chip {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 9px;
+  border-radius: 999px;
+  font-family: 'PT Serif', serif;
+  font-size: 11px;
+  font-weight: 700;
+  vertical-align: middle;
+  border: 1px solid transparent;
+}
+.status-chip.st-booked    { background: var(--free); color: var(--muted); border-color: var(--free-border); }
+.status-chip.st-arrived   { background: #d7e8cf; color: #3f6b34; border-color: #a9cf9a; }
+.status-chip.st-no_show   { background: #efd9cf; color: #9a5536; border-color: #d6a98f; }
+.status-chip.st-cancelled { background: #e6dccb; color: var(--muted); border-color: var(--line); }
+
+:root[data-theme="dark"] .status-chip.st-arrived   { background: #2c3d24; color: #b6d6a6; border-color: #44572f; }
+:root[data-theme="dark"] .status-chip.st-no_show   { background: #44291d; color: #e3a584; border-color: #6b3f2b; }
+
+.status-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.booking-row.is-cancelled .booking-info > :not(.status-actions):not(.booking-time) { opacity: 0.55; }
+.day-row.is-cancelled { opacity: 0.6; }
+
+/* ===== Телефон-ссылка ===== */
+.phone-link { display: inline-flex; align-items: center; gap: 4px; }
+.phone-link a { color: var(--gold-deep); text-decoration: none; }
+.phone-link a:hover { text-decoration: underline; }
+.phone-copy {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 0 2px;
+  line-height: 1;
+}
+.phone-copy:hover { color: var(--gold-deep); }
+
+/* Поле поиска в списке броней */
+.search-field { margin-bottom: 16px; }
 
 /* ===== Адаптив ===== */
 @media (max-width: 700px) {

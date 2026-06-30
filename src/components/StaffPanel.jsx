@@ -1,11 +1,14 @@
 import { useState } from 'react'
 import { useStaff } from '../hooks/useStaff'
+import { useDismissable } from '../hooks/useDismissable'
 
 // Панель управления сотрудниками (только для админа). Открывается из шапки.
 // Позволяет менять имя, роль и активировать/деактивировать аккаунты.
 export default function StaffPanel({ currentUserId, onClose }) {
   const { staff, loading, setActive, setRole, setName } = useStaff(true)
   const [error, setError] = useState('')
+
+  useDismissable(onClose)
 
   const guard = async (promise) => {
     setError('')
