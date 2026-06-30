@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useBookings } from '../hooks/useBookings'
 import { useAllBookings } from '../hooks/useAllBookings'
 import TableShape from './TableShape'
@@ -7,6 +7,25 @@ import BookingsList from './BookingsList'
 import DatePicker from './DatePicker'
 
 const today = () => new Date().toISOString().slice(0, 10)
+
+// Размеры области схемы зала (к ней привязаны координаты столов ниже).
+const PLAN_W = 700
+const PLAN_H = 470
+
+// Раскладка зала по номерам столов (реальное расположение).
+// Меняй координаты здесь, если нужно подвинуть стол. Стол 11 отсутствует.
+const LAYOUT = {
+  5:  { x: 230, y: 40 },   // верхний ряд
+  4:  { x: 330, y: 40 },
+  3:  { x: 420, y: 40 },
+  2:  { x: 500, y: 40 },
+  1:  { x: 590, y: 40 },
+  6:  { x: 170, y: 200 },  // середина слева
+  7:  { x: 230, y: 350 },  // нижний ряд
+  8:  { x: 340, y: 350 },
+  9:  { x: 480, y: 250 },  // зона справа (квадратные)
+  10: { x: 590, y: 360 },
+}
 
 export default function FloorPlan({ isAdmin }) {
   const [date, setDate] = useState(today())
@@ -21,6 +40,19 @@ export default function FloorPlan({ isAdmin }) {
   // Для раздела «Список броней» — все предстоящие брони (любые даты).
   const { bookings: allBookings } = useAllBookings(view === 'list')
 
+  // Масштабируем фиксированную схему зала под ширину экрана (важно на телефоне).
+  const scrollRef = useRef(null)
+  const [scale, setScale] = useState(1)
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const update = () => setScale(Math.min(1, el.clientWidth / PLAN_W))
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [view, loading])
+
   const rt = {
     live: { cls: 'live', text: 'Обновления в реальном времени' },
     connecting: { cls: 'connecting', text: 'Подключение…' },
@@ -30,10 +62,8 @@ export default function FloorPlan({ isAdmin }) {
   const bookingsFor = (tableId) =>
     bookings.filter((b) => b.table_id === tableId)
 
-  // Столы по номеру; стол 11 убран из зала.
-  const visibleTables = tables
-    .filter((t) => t.number !== 11)
-    .sort((a, b) => a.number - b.number)
+  // Показываем только столы, для которых задана позиция в раскладке (11 убран).
+  const placedTables = tables.filter((t) => LAYOUT[t.number])
 
   return (
     <div className="floor-wrap">
@@ -65,15 +95,32 @@ export default function FloorPlan({ isAdmin }) {
       {loading ? (
         <div className="floor-loading">Загрузка зала…</div>
       ) : view === 'plan' ? (
-        <div className="floor-grid">
-          {visibleTables.map((t) => (
-            <TableShape
-              key={t.id}
-              table={t}
-              bookingsCount={bookingsFor(t.id).length}
-              onClick={setActiveTable}
-            />
-          ))}
+        <div className="floor-scroll" ref={scrollRef}>
+          <div
+            className="floor-scaler"
+            style={{ width: PLAN_W * scale, height: PLAN_H * scale }}
+          >
+            <div
+              className="floor-plan"
+              style={{
+                width: PLAN_W,
+                height: PLAN_H,
+                transform: `scale(${scale})`,
+                transformOrigin: 'top left',
+              }}
+            >
+              {placedTables.map((t) => (
+                <TableShape
+                  key={t.id}
+                  table={t}
+                  x={LAYOUT[t.number].x}
+                  y={LAYOUT[t.number].y}
+                  bookingsCount={bookingsFor(t.id).length}
+                  onClick={setActiveTable}
+                />
+              ))}
+            </div>
+          </div>
         </div>
       ) : (
         <BookingsList
