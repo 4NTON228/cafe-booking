@@ -101,5 +101,6 @@ export function useBookings(date) {
   return {
     tables, bookings, loading, realtimeStatus,
     addBooking, updateBooking, deleteBooking, setBookingStatus,
+    refetchBookings,
   }
 }

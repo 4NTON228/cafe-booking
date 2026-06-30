@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../supabaseClient'
 
 // Все активные брони начиная с сегодняшнего дня (для раздела «Список броней»).
@@ -6,6 +6,9 @@ import { supabase } from '../supabaseClient'
 export function useAllBookings(enabled) {
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
+  // Держим актуальную функцию загрузки в ref, чтобы отдавать наружу стабильный
+  // refetch (для немедленного обновления после смены статуса, не дожидаясь realtime).
+  const fetchRef = useRef(() => {})
 
   useEffect(() => {
     if (!enabled) return
@@ -25,6 +28,7 @@ export function useAllBookings(enabled) {
         setLoading(false)
       }
     }
+    fetchRef.current = fetchAll
     fetchAll()
 
     const channel = supabase
@@ -40,5 +44,7 @@ export function useAllBookings(enabled) {
     }
   }, [enabled])
 
-  return { bookings, loading }
+  const refetch = () => fetchRef.current()
+
+  return { bookings, loading, refetch }
 }

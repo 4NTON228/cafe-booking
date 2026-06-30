@@ -16,22 +16,23 @@
   color-scheme: light;
 }
 
-/* Тёмная тема: тёплые приглушённые тона, чтобы сохранить «ламповый» вид кафе. */
+/* Тёмная тема: тёплые тона с заметным контрастом, чтобы элементы
+   не сливались между собой (фон / карточки / столы хорошо различимы). */
 :root[data-theme="dark"] {
-  --bg: #1d1812;
-  --surface: #2a2319;
-  --ink: #ece2cf;
-  --muted: #a8997a;
-  --gold: #cba85a;
-  --gold-deep: #d8b765;
-  --free: #3a3022;
-  --free-border: #574a32;
-  --booked: #6b4a36;
-  --booked-border: #8a5c40;
-  --danger: #e08469;
-  --line: #423827;
-  --field-bg: #221c14;
-  --row-bg: #241e15;
+  --bg: #14110b;
+  --surface: #241e15;
+  --ink: #f6efdf;
+  --muted: #c0b08c;
+  --gold: #d8b25e;
+  --gold-deep: #e7c474;
+  --free: #4a3d28;
+  --free-border: #7b6740;
+  --booked: #8a5436;
+  --booked-border: #c07e4c;
+  --danger: #f0967b;
+  --line: #3d3322;
+  --field-bg: #1a150e;
+  --row-bg: #2c2419;
   color-scheme: dark;
 }
 
@@ -553,6 +554,7 @@ h1, h2, h3 {
 :root[data-theme="dark"] .status-chip.st-no_show   { background: #44291d; color: #e3a584; border-color: #6b3f2b; }
 
 .status-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.details-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
 .booking-row.is-cancelled .booking-info > :not(.status-actions):not(.booking-time) { opacity: 0.55; }
 .day-row.is-cancelled { opacity: 0.6; }
 
