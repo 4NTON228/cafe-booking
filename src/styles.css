@@ -15,8 +15,13 @@
 
 * { box-sizing: border-box; }
 
-body {
+html, body {
   margin: 0;
+  max-width: 100%;
+  overflow-x: hidden; /* никаких боковых «шатаний» страницы */
+}
+
+body {
   background: var(--bg);
   color: var(--ink);
   font-family: 'PT Serif', Georgia, serif;
@@ -403,7 +408,9 @@ h1, h2, h3 {
 /* Обёртка схемы зала. Внутри — масштабатор, который ужимает фиксированную
    карту зала (660×460) под ширину экрана, чтобы влезала целиком на телефоне. */
 .floor-scroll { width: 100%; }
-.floor-scaler { position: relative; margin: 0 auto; }
+/* overflow:hidden обрезает невидимый layout-box схемы (660px), который
+   иначе торчит за экран и создаёт горизонтальный скролл на телефоне. */
+.floor-scaler { position: relative; margin: 0 auto; overflow: hidden; }
 
 /* ===== Список броней на день ===== */
 .day-list { max-width: 660px; margin: 0 auto; }
@@ -447,6 +454,18 @@ h1, h2, h3 {
 .day-preorder { font-size: 13px; color: var(--gold-deep); font-weight: 700; }
 .day-author { font-size: 12px; color: var(--muted); margin-top: 2px; }
 
+.day-date-head {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--gold-deep);
+  text-transform: capitalize;
+  margin: 18px 0 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--line);
+}
+.day-date-head:first-child { margin-top: 4px; }
+
 /* ===== Адаптив ===== */
 @media (max-width: 700px) {
   .app-header { padding: 12px 14px; flex-wrap: wrap; gap: 8px; }
@@ -458,11 +477,12 @@ h1, h2, h3 {
   .legend { flex-wrap: wrap; gap: 12px; font-size: 13px; }
   .view-tab { flex: 1; padding: 11px 10px; }
 
-  /* Модалку разворачиваем почти на весь экран */
-  .modal-overlay { padding: 0; align-items: flex-end; }
+  /* Модалка = нижний «лист» на весь экран по ширине, без сдвигов */
+  .modal-overlay { padding: 0; align-items: flex-end; justify-content: stretch; }
   .modal {
+    width: 100%;
     max-width: 100%;
-    max-height: 94vh;
+    max-height: 92vh;
     border-radius: 16px 16px 0 0;
     padding: 20px 16px calc(20px + env(safe-area-inset-bottom));
   }

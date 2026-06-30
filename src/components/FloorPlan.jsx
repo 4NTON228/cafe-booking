@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useBookings } from '../hooks/useBookings'
+import { useAllBookings } from '../hooks/useAllBookings'
 import TableShape from './TableShape'
 import BookingModal from './BookingModal'
 import BookingsList from './BookingsList'
@@ -8,8 +9,8 @@ import DatePicker from './DatePicker'
 const today = () => new Date().toISOString().slice(0, 10)
 
 // Реальные размеры схемы зала (координаты столов привязаны к этой области).
-const PLAN_W = 660
-const PLAN_H = 460
+const PLAN_W = 700
+const PLAN_H = 470
 
 export default function FloorPlan({ isAdmin }) {
   const [date, setDate] = useState(today())
@@ -20,6 +21,9 @@ export default function FloorPlan({ isAdmin }) {
     tables, bookings, loading, realtimeStatus,
     addBooking, updateBooking, deleteBooking,
   } = useBookings(date)
+
+  // Для раздела «Список броней» — все предстоящие брони (любые даты).
+  const { bookings: allBookings } = useAllBookings(view === 'list')
 
   // Масштабируем фиксированную схему зала под ширину экрана (важно на телефоне).
   const scrollRef = useRef(null)
@@ -58,7 +62,7 @@ export default function FloorPlan({ isAdmin }) {
           className={`view-tab ${view === 'list' ? 'active' : ''}`}
           onClick={() => setView('list')}
         >
-          Список броней{bookings.length ? ` (${bookings.length})` : ''}
+          Список броней
         </button>
       </div>
 
@@ -95,9 +99,9 @@ export default function FloorPlan({ isAdmin }) {
         </div>
       ) : (
         <BookingsList
-          bookings={bookings}
+          bookings={allBookings}
           tables={tables}
-          onSelectTable={setActiveTable}
+          onSelect={(table, d) => { setDate(d); setActiveTable(table) }}
         />
       )}
 
