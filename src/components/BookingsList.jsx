@@ -11,7 +11,7 @@ function formatDateHead(dateStr) {
 }
 
 // Список всех предстоящих броней, сгруппированный по датам.
-// onSelect(table, bookingDate) — открыть стол на нужную дату.
+// onSelect(booking) — открыть окно просмотра брони (без формы создания).
 export default function BookingsList({ bookings, tables, onSelect }) {
   const [query, setQuery] = useState('')
 
@@ -56,7 +56,7 @@ export default function BookingsList({ bookings, tables, onSelect }) {
           {g.items.map((b) => {
             const table = tableById[b.table_id]
             const st = statusOf(b)
-            const open = () => table && onSelect(table, b.booking_date)
+            const open = () => onSelect(b)
             return (
               <div
                 key={b.id}

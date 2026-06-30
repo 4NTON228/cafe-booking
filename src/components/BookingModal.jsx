@@ -49,7 +49,12 @@ export default function BookingModal({
   // но показываем предупреждение.
   const overCapacity = Number(form.guests_count) > table.capacity
 
-  const changeStatus = (id, status) => onSetStatus?.(id, status)
+  const changeStatus = async (id, status) => {
+    setBusy(true); setError('')
+    const res = await onSetStatus?.(id, status)
+    setBusy(false)
+    if (res?.error) setError('Не удалось изменить статус брони')
+  }
 
   const handleSave = async () => {
     const validationError = validate(form)
@@ -171,15 +176,15 @@ export default function BookingModal({
 
                 <div className="status-actions">
                   {st !== 'arrived' && (
-                    <button className="btn-ghost sm" onClick={() => changeStatus(b.id, 'arrived')}>Пришли</button>
+                    <button className="btn-ghost sm" disabled={busy} onClick={() => changeStatus(b.id, 'arrived')}>Пришли</button>
                   )}
                   {st !== 'no_show' && (
-                    <button className="btn-ghost sm" onClick={() => changeStatus(b.id, 'no_show')}>Не пришли</button>
+                    <button className="btn-ghost sm" disabled={busy} onClick={() => changeStatus(b.id, 'no_show')}>Не пришли</button>
                   )}
                   {st === 'cancelled' ? (
-                    <button className="btn-ghost sm" onClick={() => changeStatus(b.id, 'booked')}>Вернуть</button>
+                    <button className="btn-ghost sm" disabled={busy} onClick={() => changeStatus(b.id, 'booked')}>Вернуть</button>
                   ) : (
-                    <button className="btn-ghost sm danger" onClick={() => changeStatus(b.id, 'cancelled')}>Отменить</button>
+                    <button className="btn-ghost sm danger" disabled={busy} onClick={() => changeStatus(b.id, 'cancelled')}>Отменить</button>
                   )}
                 </div>
               </div>

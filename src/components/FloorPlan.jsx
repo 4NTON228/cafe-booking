@@ -3,6 +3,7 @@ import { useBookings } from '../hooks/useBookings'
 import { useAllBookings } from '../hooks/useAllBookings'
 import TableShape from './TableShape'
 import BookingModal from './BookingModal'
+import BookingDetails from './BookingDetails'
 import BookingsList from './BookingsList'
 import DatePicker from './DatePicker'
 import { isActiveBooking } from '../lib/status'
@@ -32,15 +33,24 @@ const LAYOUT = {
 export default function FloorPlan({ isAdmin }) {
   const [date, setDate] = useState(today())
   const [activeTable, setActiveTable] = useState(null)
+  const [detailBooking, setDetailBooking] = useState(null)
   const [view, setView] = useState('plan') // 'plan' | 'list'
 
   const {
     tables, bookings, loading, realtimeStatus,
-    addBooking, updateBooking, deleteBooking, setBookingStatus,
+    addBooking, updateBooking, deleteBooking, setBookingStatus, refetchBookings,
   } = useBookings(date)
 
   // Для раздела «Список броней» — все предстоящие брони (любые даты).
-  const { bookings: allBookings } = useAllBookings(view === 'list')
+  const { bookings: allBookings, refetch: refetchAll } = useAllBookings(view === 'list')
+
+  // Смена статуса + немедленное обновление обоих списков (не ждём realtime,
+  // иначе при «приостановленных обновлениях» нажатие выглядит как «не работает»).
+  const handleSetStatus = async (id, status) => {
+    const res = await setBookingStatus(id, status)
+    if (!res?.error) { refetchBookings(); refetchAll() }
+    return res
+  }
 
   // Масштабируем фиксированную схему зала под ширину экрана (важно на телефоне).
   const scrollRef = useRef(null)
@@ -149,7 +159,7 @@ export default function FloorPlan({ isAdmin }) {
         <BookingsList
           bookings={allBookings}
           tables={tables}
-          onSelect={(table, d) => { setDate(d); setActiveTable(table) }}
+          onSelect={(booking) => setDetailBooking(booking)}
         />
       )}
 
@@ -163,7 +173,20 @@ export default function FloorPlan({ isAdmin }) {
           onAdd={addBooking}
           onUpdate={updateBooking}
           onDelete={deleteBooking}
-          onSetStatus={setBookingStatus}
+          onSetStatus={handleSetStatus}
+        />
+      )}
+
+      {detailBooking && (
+        <BookingDetails
+          // Берём самую свежую версию из списка (статус мог измениться),
+          // с откатом на исходный снимок, если бронь пропала из выборки.
+          booking={allBookings.find((b) => b.id === detailBooking.id) || detailBooking}
+          tableNumber={tables.find((t) => t.id === detailBooking.table_id)?.number ?? '—'}
+          isAdmin={isAdmin}
+          onClose={() => setDetailBooking(null)}
+          onSetStatus={handleSetStatus}
+          onDelete={deleteBooking}
         />
       )}
     </div>
