@@ -1,5 +1,8 @@
 import { useState } from 'react'
 import { endTime, formatCreated } from '../lib/time'
+import { useDismissable } from '../hooks/useDismissable'
+import { STATUS, statusOf } from '../lib/status'
+import PhoneLink from './PhoneLink'
 
 // Варианты длительности брони (в минутах)
 const DURATIONS = [
@@ -25,7 +28,7 @@ function validate(form) {
 }
 
 export default function BookingModal({
-  table, date, isAdmin, bookings, onClose, onAdd, onUpdate, onDelete,
+  table, date, isAdmin, bookings, onClose, onAdd, onUpdate, onDelete, onSetStatus,
 }) {
   const empty = {
     guest_name: '', phone: '', guests_count: 2,
@@ -37,7 +40,16 @@ export default function BookingModal({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
+  // Закрытие по Esc + блокировка прокрутки фона под окном.
+  useDismissable(onClose)
+
   const set = (field, value) => setForm((f) => ({ ...f, [field]: value }))
+
+  // Гостей больше вместимости стола — не блокируем (можно подставить стул),
+  // но показываем предупреждение.
+  const overCapacity = Number(form.guests_count) > table.capacity
+
+  const changeStatus = (id, status) => onSetStatus?.(id, status)
 
   const handleSave = async () => {
     const validationError = validate(form)
@@ -131,15 +143,19 @@ export default function BookingModal({
           {bookings.length === 0 && (
             <div className="booking-empty">На этот день броней нет</div>
           )}
-          {bookings.map((b) => (
-            <div key={b.id} className="booking-row">
+          {bookings.map((b) => {
+            const st = statusOf(b)
+            return (
+            <div key={b.id} className={`booking-row ${st === 'cancelled' ? 'is-cancelled' : ''}`}>
               <div className="booking-info">
                 <span className="booking-time">
                   {b.start_time.slice(0, 5)}–{endTime(b.start_time, b.duration_min)}
+                  <span className={`status-chip ${STATUS[st].cls}`}>{STATUS[st].label}</span>
                 </span>
                 <span className="booking-name">{b.guest_name}</span>
                 <span className="booking-meta">
-                  {b.guests_count} чел.{b.phone ? ` · ${b.phone}` : ''}
+                  {b.guests_count} чел.
+                  {b.phone && <> · <PhoneLink phone={b.phone} /></>}
                 </span>
                 {b.has_preorder && (
                   <span className="booking-preorder">
@@ -152,6 +168,20 @@ export default function BookingModal({
                   {b.creator?.full_name ? `: ${b.creator.full_name}` : ': —'}
                   {b.created_at ? ` · ${formatCreated(b.created_at)}` : ''}
                 </span>
+
+                <div className="status-actions">
+                  {st !== 'arrived' && (
+                    <button className="btn-ghost sm" onClick={() => changeStatus(b.id, 'arrived')}>Пришли</button>
+                  )}
+                  {st !== 'no_show' && (
+                    <button className="btn-ghost sm" onClick={() => changeStatus(b.id, 'no_show')}>Не пришли</button>
+                  )}
+                  {st === 'cancelled' ? (
+                    <button className="btn-ghost sm" onClick={() => changeStatus(b.id, 'booked')}>Вернуть</button>
+                  ) : (
+                    <button className="btn-ghost sm danger" onClick={() => changeStatus(b.id, 'cancelled')}>Отменить</button>
+                  )}
+                </div>
               </div>
               <div className="booking-actions">
                 <button className="btn-ghost sm" onClick={() => startEdit(b)}>Изменить</button>
@@ -160,7 +190,8 @@ export default function BookingModal({
                 )}
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
 
         <div className="booking-form">
@@ -192,6 +223,9 @@ export default function BookingModal({
               <label className="field-label">Гостей</label>
               <input className="field" type="number" min="1" value={form.guests_count}
                 onChange={(e) => set('guests_count', e.target.value)} />
+              {overCapacity && (
+                <span className="field-warn">Стол на {table.capacity} чел.</span>
+              )}
             </div>
             <div>
               <label className="field-label">Телефон</label>

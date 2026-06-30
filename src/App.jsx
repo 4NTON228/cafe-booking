@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { isConfigured, missingEnv } from './supabaseClient'
 import { useAuth } from './hooks/useAuth'
+import { useTheme } from './hooks/useTheme'
 import Login from './components/Login'
 import SetPassword from './components/SetPassword'
 import Blocked from './components/Blocked'
@@ -9,15 +10,18 @@ import StaffPanel from './components/StaffPanel'
 import ConnectionError from './components/ConnectionError'
 
 export default function App() {
+  // Тему применяем глобально (в т.ч. на экране входа), даже если БД не настроена.
+  const theme = useTheme()
+
   // Нет переменных окружения — показываем инструкцию вместо краша.
   if (!isConfigured) {
     return <ConnectionError missing={missingEnv} />
   }
 
-  return <AuthedApp />
+  return <AuthedApp theme={theme} />
 }
 
-function AuthedApp() {
+function AuthedApp({ theme }) {
   const {
     session, profile, isAdmin, isActive, loading, recovery,
     signOut, updatePassword,
@@ -52,6 +56,14 @@ function AuthedApp() {
             {profile?.full_name || session.user.email}
             {isAdmin && <span className="role-badge">админ</span>}
           </span>
+          <button
+            className="btn-ghost icon-btn"
+            onClick={theme.toggle}
+            title={theme.theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
+            aria-label="Сменить тему"
+          >
+            {theme.theme === 'dark' ? '☀' : '☾'}
+          </button>
           {isAdmin && (
             <button className="btn-ghost" onClick={() => setStaffOpen(true)}>
               Сотрудники
