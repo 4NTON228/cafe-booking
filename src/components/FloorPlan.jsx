@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useBookings } from '../hooks/useBookings'
 import TableShape from './TableShape'
 import BookingModal from './BookingModal'
+import BookingsList from './BookingsList'
 import DatePicker from './DatePicker'
 
 const today = () => new Date().toISOString().slice(0, 10)
@@ -9,6 +10,7 @@ const today = () => new Date().toISOString().slice(0, 10)
 export default function FloorPlan({ isAdmin }) {
   const [date, setDate] = useState(today())
   const [activeTable, setActiveTable] = useState(null)
+  const [view, setView] = useState('plan') // 'plan' | 'list'
 
   const {
     tables, bookings, loading, realtimeStatus,
@@ -28,6 +30,21 @@ export default function FloorPlan({ isAdmin }) {
     <div className="floor-wrap">
       <DatePicker date={date} onChange={setDate} />
 
+      <div className="view-switch">
+        <button
+          className={`view-tab ${view === 'plan' ? 'active' : ''}`}
+          onClick={() => setView('plan')}
+        >
+          Схема зала
+        </button>
+        <button
+          className={`view-tab ${view === 'list' ? 'active' : ''}`}
+          onClick={() => setView('list')}
+        >
+          Список броней{bookings.length ? ` (${bookings.length})` : ''}
+        </button>
+      </div>
+
       <div className="legend">
         <span><i className="dot free" /> Свободно</span>
         <span><i className="dot booked" /> Забронировано</span>
@@ -38,17 +55,25 @@ export default function FloorPlan({ isAdmin }) {
 
       {loading ? (
         <div className="floor-loading">Загрузка зала…</div>
-      ) : (
-        <div className="floor-plan">
-          {tables.map((t) => (
-            <TableShape
-              key={t.id}
-              table={t}
-              bookingsCount={bookingsFor(t.id).length}
-              onClick={setActiveTable}
-            />
-          ))}
+      ) : view === 'plan' ? (
+        <div className="floor-scroll">
+          <div className="floor-plan">
+            {tables.map((t) => (
+              <TableShape
+                key={t.id}
+                table={t}
+                bookingsCount={bookingsFor(t.id).length}
+                onClick={setActiveTable}
+              />
+            ))}
+          </div>
         </div>
+      ) : (
+        <BookingsList
+          bookings={bookings}
+          tables={tables}
+          onSelectTable={setActiveTable}
+        />
       )}
 
       {activeTable && (

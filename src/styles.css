@@ -378,9 +378,103 @@ h1, h2, h3 {
 .role-badge.muted { background: var(--muted); }
 .btn-ghost.sm:disabled { opacity: 0.5; cursor: default; }
 
+/* ===== Переключатель Схема / Список ===== */
+.view-switch {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+.view-tab {
+  padding: 9px 18px;
+  border: 1px solid var(--free-border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 15px;
+  cursor: pointer;
+}
+.view-tab:hover { background: var(--free); }
+.view-tab.active {
+  background: var(--gold-deep);
+  border-color: var(--gold-deep);
+  color: #fdf8ec;
+}
+
+/* Обёртка схемы зала: на узких экранах даёт горизонтальную прокрутку */
+.floor-scroll { width: 100%; overflow-x: auto; }
+
+/* ===== Список броней на день ===== */
+.day-list { max-width: 660px; margin: 0 auto; }
+.day-row {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  margin-bottom: 10px;
+  background: #fff;
+  font-family: inherit;
+  cursor: pointer;
+}
+.day-row:hover { border-color: var(--free-border); background: var(--surface); }
+.day-table {
+  flex: 0 0 auto;
+  min-width: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--gold-deep);
+  border-right: 1px solid var(--line);
+  padding-right: 12px;
+}
+.day-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.day-time {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--gold-deep);
+}
+.day-guest { font-weight: 700; }
+.day-meta { font-size: 13px; color: var(--muted); }
+.day-preorder { font-size: 13px; color: var(--gold-deep); font-weight: 700; }
+.day-author { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
 /* ===== Адаптив ===== */
 @media (max-width: 700px) {
-  .floor-plan { transform: scale(0.8); transform-origin: top center; }
+  .app-header { padding: 12px 14px; flex-wrap: wrap; gap: 8px; }
+  .app-header h1 { font-size: 24px; }
+  .header-right { gap: 8px; flex-wrap: wrap; }
+  .user-name { font-size: 13px; }
+
+  .floor-wrap { padding: 16px 12px 50px; }
+  /* На телефоне схему не сжимаем, а прокручиваем по горизонтали —
+     так столы остаются нормального размера для пальца. */
+  .floor-scroll {
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 8px;
+  }
+  .legend { flex-wrap: wrap; gap: 12px; font-size: 13px; }
+  .view-tab { flex: 1; padding: 11px 10px; }
+
+  /* Модалку разворачиваем почти на весь экран */
+  .modal-overlay { padding: 0; align-items: flex-end; }
+  .modal {
+    max-width: 100%;
+    max-height: 94vh;
+    border-radius: 16px 16px 0 0;
+    padding: 20px 16px calc(20px + env(safe-area-inset-bottom));
+  }
+  .booking-row { flex-direction: column; }
+  .booking-actions { flex-direction: row; }
+  .field-row { flex-direction: column; gap: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
