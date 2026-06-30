@@ -8,6 +8,7 @@ export default function SetPassword({ onSubmit }) {
   const [confirm, setConfirm] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [showPw, setShowPw] = useState(false)
 
   const handleSave = async () => {
     setError('')
@@ -26,17 +27,26 @@ export default function SetPassword({ onSubmit }) {
         <p className="login-sub">Задайте пароль</p>
 
         <label className="field-label">Новый пароль</label>
-        <input
-          className="field"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+        <div className="field-pw">
+          <input
+            className="field"
+            type={showPw ? 'text' : 'password'}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <button
+            type="button"
+            className="pw-toggle"
+            onClick={() => setShowPw((s) => !s)}
+          >
+            {showPw ? 'Скрыть' : 'Показать'}
+          </button>
+        </div>
 
         <label className="field-label">Повторите пароль</label>
         <input
           className="field"
-          type="password"
+          type={showPw ? 'text' : 'password'}
           value={confirm}
           onChange={(e) => setConfirm(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSave()}

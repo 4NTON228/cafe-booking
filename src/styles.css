@@ -75,6 +75,24 @@ h1, h2, h3 {
 .error-text { color: var(--danger); font-size: 14px; margin-top: 12px; }
 .notice-text { color: var(--gold-deep); font-size: 14px; margin-top: 12px; }
 
+/* Поле пароля с кнопкой «Показать / Скрыть» */
+.field-pw { position: relative; }
+.field-pw .field { padding-right: 92px; }
+.pw-toggle {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 6px 8px;
+}
+.pw-toggle:hover { color: var(--gold-deep); }
+
 /* Ссылка-кнопка (напр. «Забыли пароль?») */
 .link-btn {
   display: block;

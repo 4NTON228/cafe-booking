@@ -12,6 +12,7 @@ export default function Login() {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
+  const [showPw, setShowPw] = useState(false)
 
   const handleSignIn = async () => {
     setError('')
@@ -58,13 +59,22 @@ export default function Login() {
         {!isReset && (
           <>
             <label className="field-label">Пароль</label>
-            <input
-              className="field"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSignIn()}
-            />
+            <div className="field-pw">
+              <input
+                className="field"
+                type={showPw ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSignIn()}
+              />
+              <button
+                type="button"
+                className="pw-toggle"
+                onClick={() => setShowPw((s) => !s)}
+              >
+                {showPw ? 'Скрыть' : 'Показать'}
+              </button>
+            </div>
           </>
         )}
 
