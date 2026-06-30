@@ -213,11 +213,15 @@ h1, h2, h3 {
 .rt-status.offline { color: var(--danger); }
 .rt-status.offline .rt-dot { background: var(--danger); }
 
-/* ===== Схема зала ===== */
-.floor-plan {
-  position: relative;
-  width: 660px;
-  height: 460px;
+/* ===== Схема зала (адаптивная сетка плиток) ===== */
+.floor-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 18px;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 24px;
   background:
     repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(176,141,62,0.06) 40px),
     repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(176,141,62,0.06) 40px),
@@ -233,9 +237,9 @@ h1, h2, h3 {
 
 /* ===== Стол ===== */
 .table-shape {
-  position: absolute;
-  width: 84px;
-  height: 84px;
+  position: relative;
+  width: 96px;
+  height: 96px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -405,12 +409,6 @@ h1, h2, h3 {
   color: #fdf8ec;
 }
 
-/* Обёртка схемы зала. Внутри — масштабатор, который ужимает фиксированную
-   карту зала (660×460) под ширину экрана, чтобы влезала целиком на телефоне. */
-.floor-scroll { width: 100%; }
-/* overflow:hidden обрезает невидимый layout-box схемы (660px), который
-   иначе торчит за экран и создаёт горизонтальный скролл на телефоне. */
-.floor-scaler { position: relative; margin: 0 auto; overflow: hidden; }
 
 /* ===== Список броней на день ===== */
 .day-list { max-width: 660px; margin: 0 auto; }
@@ -476,6 +474,10 @@ h1, h2, h3 {
   .floor-wrap { padding: 16px 12px 50px; }
   .legend { flex-wrap: wrap; gap: 12px; font-size: 13px; }
   .view-tab { flex: 1; padding: 11px 10px; }
+
+  /* Сетка столов: компактнее, ровные ряды по 3 */
+  .floor-grid { gap: 12px; padding: 16px; }
+  .table-shape { width: 88px; height: 88px; }
 
   /* Модалка = нижний «лист», жёстко прибитый к краям экрана.
      position:fixed + left/right:0 исключает любые сдвиги и «шатание». */

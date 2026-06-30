@@ -5,7 +5,6 @@ export default function TableShape({ table, bookingsCount, onClick }) {
   return (
     <button
       className={`table-shape ${table.shape} ${isBooked ? 'booked' : 'free'}`}
-      style={{ left: table.pos_x, top: table.pos_y }}
       onClick={() => onClick(table)}
       title={`Стол №${table.number} · до ${table.capacity} чел.`}
     >
