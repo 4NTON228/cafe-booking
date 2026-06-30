@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useBookings } from '../hooks/useBookings'
 import TableShape from './TableShape'
 import BookingModal from './BookingModal'
@@ -6,6 +6,10 @@ import BookingsList from './BookingsList'
 import DatePicker from './DatePicker'
 
 const today = () => new Date().toISOString().slice(0, 10)
+
+// Реальные размеры схемы зала (координаты столов привязаны к этой области).
+const PLAN_W = 660
+const PLAN_H = 460
 
 export default function FloorPlan({ isAdmin }) {
   const [date, setDate] = useState(today())
@@ -16,6 +20,19 @@ export default function FloorPlan({ isAdmin }) {
     tables, bookings, loading, realtimeStatus,
     addBooking, updateBooking, deleteBooking,
   } = useBookings(date)
+
+  // Масштабируем фиксированную схему зала под ширину экрана (важно на телефоне).
+  const scrollRef = useRef(null)
+  const [scale, setScale] = useState(1)
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const update = () => setScale(Math.min(1, el.clientWidth / PLAN_W))
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [view, loading])
 
   const rt = {
     live: { cls: 'live', text: 'Обновления в реальном времени' },
@@ -56,16 +73,24 @@ export default function FloorPlan({ isAdmin }) {
       {loading ? (
         <div className="floor-loading">Загрузка зала…</div>
       ) : view === 'plan' ? (
-        <div className="floor-scroll">
-          <div className="floor-plan">
-            {tables.map((t) => (
-              <TableShape
-                key={t.id}
-                table={t}
-                bookingsCount={bookingsFor(t.id).length}
-                onClick={setActiveTable}
-              />
-            ))}
+        <div className="floor-scroll" ref={scrollRef}>
+          <div
+            className="floor-scaler"
+            style={{ width: PLAN_W * scale, height: PLAN_H * scale }}
+          >
+            <div
+              className="floor-plan"
+              style={{ transform: `scale(${scale})`, transformOrigin: 'top left' }}
+            >
+              {tables.map((t) => (
+                <TableShape
+                  key={t.id}
+                  table={t}
+                  bookingsCount={bookingsFor(t.id).length}
+                  onClick={setActiveTable}
+                />
+              ))}
+            </div>
           </div>
         </div>
       ) : (
