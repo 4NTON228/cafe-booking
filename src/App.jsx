@@ -54,7 +54,9 @@ function AuthedApp({ theme }) {
         <div className="header-right">
           <span className="user-name">
             {profile?.full_name || session.user.email}
-            {isAdmin && <span className="role-badge">админ</span>}
+            {/* Бейдж «админ» только у настоящих админов по роли —
+                скрытые админы (role='staff') его не показывают. */}
+            {profile?.role === 'admin' && <span className="role-badge">админ</span>}
           </span>
           <button
             className="btn-ghost icon-btn"

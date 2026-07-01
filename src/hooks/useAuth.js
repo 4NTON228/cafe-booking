@@ -6,20 +6,26 @@ import { supabase } from '../supabaseClient'
 export function useAuth() {
   const [session, setSession] = useState(null)
   const [profile, setProfile] = useState(null) // { full_name, role, is_active }
+  // Админ-статус берём с сервера (RPC), а не из profiles.role — так работают
+  // и обычные, и «скрытые» админы (у которых role в profiles остаётся 'staff').
+  const [adminFlag, setAdminFlag] = useState(false)
   const [loading, setLoading] = useState(true)
   // recovery=true, когда пользователь пришёл по ссылке из письма
   // (приглашение / сброс пароля) — показываем экран установки пароля.
   const [recovery, setRecovery] = useState(false)
 
-  // Загрузить профиль текущего пользователя
+  // Загрузить профиль текущего пользователя + серверный админ-статус
   const loadProfile = async (userId) => {
-    if (!userId) { setProfile(null); return }
+    if (!userId) { setProfile(null); setAdminFlag(false); return }
     const { data } = await supabase
       .from('profiles')
       .select('full_name, role, is_active')
       .eq('id', userId)
       .single()
     setProfile(data || null)
+    // am_i_admin() учитывает и скрытых админов; фолбэк — роль из профиля.
+    const { data: adm, error } = await supabase.rpc('am_i_admin')
+    setAdminFlag(error ? data?.role === 'admin' : adm === true)
   }
 
   useEffect(() => {
@@ -59,7 +65,7 @@ export function useAuth() {
     return result
   }
 
-  const isAdmin = profile?.role === 'admin'
+  const isAdmin = adminFlag
   // Если профиль ещё не загружен — считаем активным, чтобы не мигал экран блокировки.
   const isActive = profile ? profile.is_active !== false : true
 
