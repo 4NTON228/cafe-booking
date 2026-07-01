@@ -80,6 +80,9 @@ export default function BookingsList({ bookings, tables, onSelect }) {
                   {b.has_preorder && (
                     <span className="day-preorder">Предзаказ: {b.preorder_text}</span>
                   )}
+                  {b.status_reason && (
+                    <span className="booking-reason">Причина: {b.status_reason}</span>
+                  )}
                   <span className="day-author">
                     Забронировал
                     {b.creator?.full_name ? `: ${b.creator.full_name}` : ': —'}
