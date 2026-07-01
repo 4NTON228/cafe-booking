@@ -82,26 +82,31 @@ export function useBookings(date) {
   }, [])
 
   // created_by НЕ передаём — БД проставит сама (default auth.uid()).
+  // booking может быть массивом (бронь на всю группу столов) — insert атомарен.
   const addBooking = (booking) =>
     supabase.from('bookings').insert(booking)
 
-  const updateBooking = (id, fields) =>
-    supabase.from('bookings').update(fields).eq('id', id)
+  // Операции применяем ко всей «большой брони» (по party_id), если она такая;
+  // иначе — к одной брони по id.
+  const scope = (query, booking) =>
+    booking?.party_id ? query.eq('party_id', booking.party_id) : query.eq('id', booking.id)
+
+  const updateBooking = (booking, fields) =>
+    scope(supabase.from('bookings').update(fields), booking)
 
   // Soft delete: помечаем deleted_at (разрешено только админам — проверка в БД).
-  const deleteBooking = (id) =>
-    supabase.from('bookings')
-      .update({ deleted_at: new Date().toISOString() })
-      .eq('id', id)
+  const deleteBooking = (booking) =>
+    scope(supabase.from('bookings').update({ deleted_at: new Date().toISOString() }), booking)
 
-  // Смена статуса брони (пришли / не пришли / отменена / ожидается).
-  // Причину (status_reason) храним только для no_show/cancelled,
+  // Смена статуса брони (пришли / не пришли / отменена / ушёл / ожидается).
+  // Причину (status_reason) храним только для no_show/cancelled/left,
   // при возврате в активный статус — очищаем.
-  const setBookingStatus = (id, status, reason) => {
+  const setBookingStatus = (booking, status, reason) => {
     const needsReason = status === 'no_show' || status === 'cancelled' || status === 'left'
-    return supabase.from('bookings')
-      .update({ status, status_reason: needsReason ? (reason ?? null) : null })
-      .eq('id', id)
+    return scope(
+      supabase.from('bookings').update({ status, status_reason: needsReason ? (reason ?? null) : null }),
+      booking,
+    )
   }
 
   return {

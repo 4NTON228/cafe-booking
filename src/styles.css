@@ -620,6 +620,40 @@ h1, h2, h3 {
 /* Поле поиска в списке броней */
 .search-field { margin-bottom: 16px; }
 
+/* Метка «большой брони» на несколько столов */
+.booking-group {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gold-deep);
+}
+
+/* Кнопка-ссылка внутри строки (напр. «Составные столы» в сводке) */
+.link-btn.inline {
+  display: inline;
+  margin: 0 0 0 10px;
+  font-size: 13px;
+}
+
+/* Выбор столов при создании группы */
+.table-picker { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.table-pick {
+  min-width: 46px;
+  padding: 9px 12px;
+  border: 1px solid var(--free-border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.table-pick.on {
+  background: var(--gold-deep);
+  border-color: var(--gold-deep);
+  color: #fdf8ec;
+}
+
 /* ===== Адаптив ===== */
 @media (max-width: 700px) {
   .app-header { padding: 12px 14px; flex-wrap: wrap; gap: 8px; }

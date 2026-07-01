@@ -17,6 +17,15 @@ export default function BookingsList({ bookings, tables, onSelect }) {
 
   const tableById = Object.fromEntries(tables.map((t) => [t.id, t]))
 
+  // party_id -> отсортированные номера столов «большой брони».
+  const partyNums = {}
+  for (const b of bookings) {
+    if (!b.party_id) continue
+    ;(partyNums[b.party_id] ||= []).push(tableById[b.table_id]?.number)
+  }
+  for (const k of Object.keys(partyNums))
+    partyNums[k] = [...new Set(partyNums[k])].sort((a, b) => a - b)
+
   // Поиск по имени гостя и телефону (без учёта регистра).
   const q = query.trim().toLowerCase()
   const filtered = q
@@ -25,9 +34,14 @@ export default function BookingsList({ bookings, tables, onSelect }) {
         (b.phone || '').toLowerCase().includes(q))
     : bookings
 
-  // Группируем по дате (bookings уже отсортированы по дате и времени).
+  // Группируем по дате. «Большую бронь» (party) показываем одной строкой.
+  const seenParty = new Set()
   const groups = []
   for (const b of filtered) {
+    if (b.party_id) {
+      if (seenParty.has(b.party_id)) continue
+      seenParty.add(b.party_id)
+    }
     let g = groups[groups.length - 1]
     if (!g || g.date !== b.booking_date) {
       g = { date: b.booking_date, items: [] }
@@ -56,6 +70,7 @@ export default function BookingsList({ bookings, tables, onSelect }) {
           {g.items.map((b) => {
             const table = tableById[b.table_id]
             const st = statusOf(b)
+            const nums = b.party_id && partyNums[b.party_id]?.length > 1 ? partyNums[b.party_id] : null
             const open = () => onSelect(b)
             return (
               <div
@@ -66,13 +81,14 @@ export default function BookingsList({ bookings, tables, onSelect }) {
                 onClick={open}
                 onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && open()}
               >
-                <span className="day-table">№{table?.number ?? '—'}</span>
+                <span className="day-table">{nums ? nums.join('+') : `№${table?.number ?? '—'}`}</span>
                 <span className="day-main">
                   <span className="day-time">
                     {timeRange(b.start_time, b.duration_min)}
                     <span className={`status-chip ${STATUS[st].cls}`}>{STATUS[st].label}</span>
                   </span>
                   <span className="day-guest">{b.guest_name}</span>
+                  {nums && <span className="booking-group">Столы {nums.join(', ')}</span>}
                   <span className="day-meta">
                     {b.guests_count} чел.
                     {b.phone && <> · <PhoneLink phone={b.phone} /></>}
