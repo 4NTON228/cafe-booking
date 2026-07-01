@@ -549,9 +549,29 @@ h1, h2, h3 {
 .status-chip.st-arrived   { background: #d7e8cf; color: #3f6b34; border-color: #a9cf9a; }
 .status-chip.st-no_show   { background: #efd9cf; color: #9a5536; border-color: #d6a98f; }
 .status-chip.st-cancelled { background: #e6dccb; color: var(--muted); border-color: var(--line); }
+.status-chip.st-left      { background: #d8e2ec; color: #3c5a76; border-color: #a7bdd2; }
 
 :root[data-theme="dark"] .status-chip.st-arrived   { background: #2c3d24; color: #b6d6a6; border-color: #44572f; }
 :root[data-theme="dark"] .status-chip.st-no_show   { background: #44291d; color: #e3a584; border-color: #6b3f2b; }
+:root[data-theme="dark"] .status-chip.st-left      { background: #263542; color: #a9c4dc; border-color: #3d556b; }
+
+/* Акцентная второстепенная кнопка (напр. «Гость ушёл») */
+.btn-ghost.accent { border-color: var(--gold); color: var(--gold-deep); }
+.btn-ghost.accent:hover { background: var(--free); }
+
+/* Быстрые слова для комментария/причины */
+.quick-words { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.quick-word {
+  padding: 4px 11px;
+  border: 1px solid var(--free-border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.quick-word:hover { background: var(--free); border-color: var(--gold); }
 
 .status-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .details-actions {
