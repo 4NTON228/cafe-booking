@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { timeRange, formatCreated } from '../lib/time'
-import { STATUS, statusOf } from '../lib/status'
+import { STATUS, statusOf, reasonPrefix } from '../lib/status'
 import PhoneLink from './PhoneLink'
 
 // Заголовок даты: «Пятница, 10 июля».
@@ -81,7 +81,7 @@ export default function BookingsList({ bookings, tables, onSelect }) {
                     <span className="day-preorder">Предзаказ: {b.preorder_text}</span>
                   )}
                   {b.status_reason && (
-                    <span className="booking-reason">Причина: {b.status_reason}</span>
+                    <span className="booking-reason">{reasonPrefix(b)}: {b.status_reason}</span>
                   )}
                   <span className="day-author">
                     Забронировал

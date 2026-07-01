@@ -1,19 +1,19 @@
 import { useState } from 'react'
 import { endTime, formatCreated } from '../lib/time'
 import { useDismissable } from '../hooks/useDismissable'
-import { STATUS, statusOf } from '../lib/status'
+import { STATUS, statusOf, reasonPrefix } from '../lib/status'
 import PhoneLink from './PhoneLink'
 import StatusControls from './StatusControls'
 
-// Варианты длительности брони (в минутах)
-const DURATIONS = [
-  { label: '30 мин', value: 30 },
-  { label: '1 час', value: 60 },
-  { label: '1,5 часа', value: 90 },
-  { label: '2 часа', value: 120 },
-  { label: '3 часа', value: 180 },
-  { label: '4 часа', value: 240 },
-]
+// Длительность брони в минутах из времени начала и конца.
+// Если конец раньше или равен началу — считаем, что бронь через полночь.
+function durationFromTimes(start, end) {
+  const [sh, sm] = start.split(':').map(Number)
+  const [eh, em] = end.split(':').map(Number)
+  let diff = (eh * 60 + em) - (sh * 60 + sm)
+  if (diff <= 0) diff += 1440
+  return diff
+}
 
 // Клиентская валидация — для быстрого отклика.
 // Настоящая защита в БД (CHECK + exclusion constraint), это лишь UX.
@@ -22,19 +22,23 @@ function validate(form) {
   if (Number(form.guests_count) < 1) return 'Гостей должно быть больше нуля'
   if (form.phone && !/^\+?[0-9 ()\-]{6,20}$/.test(form.phone))
     return 'Проверьте формат телефона'
-  if (!form.start_time) return 'Укажите время'
+  if (!form.start_time || !form.end_time) return 'Укажите время начала и конца'
+  const dur = durationFromTimes(form.start_time, form.end_time)
+  if (dur < 30) return 'Бронь не короче 30 минут'
+  if (dur > 360) return 'Бронь не длиннее 6 часов'
   if (form.has_preorder && !form.preorder_text.trim())
     return 'Опишите предзаказ или снимите галочку'
   return null
 }
 
 export default function BookingModal({
-  table, date, isAdmin, bookings, onClose, onAdd, onUpdate, onDelete, onSetStatus,
+  table, date, isAdmin, bookings, tables = [], onClose, onAdd, onUpdate, onDelete, onSetStatus,
 }) {
   const empty = {
     guest_name: '', phone: '', guests_count: 2,
-    start_time: '18:00', duration_min: 120,
+    start_time: '18:00', end_time: '20:00',
     has_preorder: false, preorder_text: '', comment: '',
+    table_id: table.id,
   }
   const [form, setForm] = useState(empty)
   const [editingId, setEditingId] = useState(null)
@@ -70,7 +74,7 @@ export default function BookingModal({
       phone: form.phone.trim() || null,
       guests_count: Number(form.guests_count),
       start_time: form.start_time,
-      duration_min: Number(form.duration_min),
+      duration_min: durationFromTimes(form.start_time, form.end_time),
       has_preorder: form.has_preorder,
       preorder_text: form.has_preorder ? form.preorder_text.trim() : null,
       comment: form.comment.trim() || null,
@@ -78,7 +82,9 @@ export default function BookingModal({
 
     let result
     if (editingId) {
-      result = await onUpdate(editingId, payload)
+      // table_id включаем, чтобы админ мог перенести бронь на другой стол
+      // (для офиков БД-триггер запретит смену стола).
+      result = await onUpdate(editingId, { ...payload, table_id: Number(form.table_id) })
     } else {
       result = await onAdd({
         ...payload,
@@ -99,7 +105,9 @@ export default function BookingModal({
       } else if (msg.includes('guests_count')) {
         setError('Некорректное количество гостей')
       } else if (msg.includes('другой стол')) {
-        setError('Перенос на другой стол недоступен — создайте новую бронь')
+        setError('Переносить бронь на другой стол может только администратор')
+      } else if (msg.includes('другую дату')) {
+        setError('Перенос на другую дату недоступен — создайте новую бронь')
       } else {
         setError('Не удалось сохранить бронь')
       }
@@ -118,10 +126,11 @@ export default function BookingModal({
       phone: b.phone || '',
       guests_count: b.guests_count,
       start_time: b.start_time.slice(0, 5),
-      duration_min: b.duration_min,
+      end_time: endTime(b.start_time, b.duration_min),
       has_preorder: b.has_preorder || false,
       preorder_text: b.preorder_text || '',
       comment: b.comment || '',
+      table_id: b.table_id,
     })
   }
 
@@ -170,7 +179,7 @@ export default function BookingModal({
                 )}
                 {b.comment && <span className="booking-comment">{b.comment}</span>}
                 {b.status_reason && (
-                  <span className="booking-reason">Причина: {b.status_reason}</span>
+                  <span className="booking-reason">{reasonPrefix(b)}: {b.status_reason}</span>
                 )}
                 <span className="booking-author">
                   Забронировал
@@ -209,15 +218,25 @@ export default function BookingModal({
                 onChange={(e) => set('start_time', e.target.value)} />
             </div>
             <div>
-              <label className="field-label">Длительность</label>
-              <select className="field" value={form.duration_min}
-                onChange={(e) => set('duration_min', e.target.value)}>
-                {DURATIONS.map((d) => (
-                  <option key={d.value} value={d.value}>{d.label}</option>
-                ))}
-              </select>
+              <label className="field-label">Время конца</label>
+              <input className="field" type="time" value={form.end_time}
+                onChange={(e) => set('end_time', e.target.value)} />
             </div>
           </div>
+
+          {editingId && isAdmin && tables.length > 0 && (
+            <>
+              <label className="field-label">Перенести на стол</label>
+              <select className="field" value={form.table_id}
+                onChange={(e) => set('table_id', e.target.value)}>
+                {tables.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    Стол №{t.number} (до {t.capacity} чел.)
+                  </option>
+                ))}
+              </select>
+            </>
+          )}
 
           <div className="field-row">
             <div>

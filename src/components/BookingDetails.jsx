@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { endTime, formatCreated } from '../lib/time'
 import { useDismissable } from '../hooks/useDismissable'
-import { STATUS, statusOf } from '../lib/status'
+import { STATUS, statusOf, reasonPrefix } from '../lib/status'
 import PhoneLink from './PhoneLink'
 import StatusControls from './StatusControls'
 
@@ -57,7 +57,7 @@ export default function BookingDetails({
             )}
             {booking.comment && <span className="booking-comment">{booking.comment}</span>}
             {booking.status_reason && (
-              <span className="booking-reason">Причина: {booking.status_reason}</span>
+              <span className="booking-reason">{reasonPrefix(booking)}: {booking.status_reason}</span>
             )}
             <span className="booking-author">
               Забронировал

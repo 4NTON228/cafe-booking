@@ -98,7 +98,7 @@ export function useBookings(date) {
   // Причину (status_reason) храним только для no_show/cancelled,
   // при возврате в активный статус — очищаем.
   const setBookingStatus = (id, status, reason) => {
-    const needsReason = status === 'no_show' || status === 'cancelled'
+    const needsReason = status === 'no_show' || status === 'cancelled' || status === 'left'
     return supabase.from('bookings')
       .update({ status, status_reason: needsReason ? (reason ?? null) : null })
       .eq('id', id)

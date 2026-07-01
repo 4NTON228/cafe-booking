@@ -169,6 +169,7 @@ export default function FloorPlan({ isAdmin }) {
           date={date}
           isAdmin={isAdmin}
           bookings={bookingsFor(activeTable.id)}
+          tables={tables}
           onClose={() => setActiveTable(null)}
           onAdd={addBooking}
           onUpdate={updateBooking}
