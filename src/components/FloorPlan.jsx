@@ -46,8 +46,8 @@ export default function FloorPlan({ isAdmin }) {
 
   // Смена статуса + немедленное обновление обоих списков (не ждём realtime,
   // иначе при «приостановленных обновлениях» нажатие выглядит как «не работает»).
-  const handleSetStatus = async (id, status) => {
-    const res = await setBookingStatus(id, status)
+  const handleSetStatus = async (id, status, reason) => {
+    const res = await setBookingStatus(id, status, reason)
     if (!res?.error) { refetchBookings(); refetchAll() }
     return res
   }

@@ -554,7 +554,31 @@ h1, h2, h3 {
 :root[data-theme="dark"] .status-chip.st-no_show   { background: #44291d; color: #e3a584; border-color: #6b3f2b; }
 
 .status-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-.details-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.details-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+/* Причина, по которой гость не пришёл / бронь отменена */
+.booking-reason, .day-reason {
+  font-size: 13px;
+  color: var(--danger);
+  font-style: italic;
+}
+
+/* Окно ввода причины (при «Не пришли» / «Отменить») */
+.reason-box { margin-top: 8px; width: 100%; }
+.reason-box .field-label { margin-top: 0; }
+.reason-actions { display: flex; gap: 8px; margin-top: 8px; }
+.btn-primary.sm {
+  width: auto;
+  margin-top: 0;
+  padding: 7px 16px;
+  font-size: 15px;
+}
 .booking-row.is-cancelled .booking-info > :not(.status-actions):not(.booking-time) { opacity: 0.55; }
 .day-row.is-cancelled { opacity: 0.6; }
 

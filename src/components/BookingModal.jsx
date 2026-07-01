@@ -3,6 +3,7 @@ import { endTime, formatCreated } from '../lib/time'
 import { useDismissable } from '../hooks/useDismissable'
 import { STATUS, statusOf } from '../lib/status'
 import PhoneLink from './PhoneLink'
+import StatusControls from './StatusControls'
 
 // Варианты длительности брони (в минутах)
 const DURATIONS = [
@@ -49,9 +50,9 @@ export default function BookingModal({
   // но показываем предупреждение.
   const overCapacity = Number(form.guests_count) > table.capacity
 
-  const changeStatus = async (id, status) => {
+  const changeStatus = async (id, status, reason) => {
     setBusy(true); setError('')
-    const res = await onSetStatus?.(id, status)
+    const res = await onSetStatus?.(id, status, reason)
     setBusy(false)
     if (res?.error) setError('Не удалось изменить статус брони')
   }
@@ -168,25 +169,20 @@ export default function BookingModal({
                   </span>
                 )}
                 {b.comment && <span className="booking-comment">{b.comment}</span>}
+                {b.status_reason && (
+                  <span className="booking-reason">Причина: {b.status_reason}</span>
+                )}
                 <span className="booking-author">
                   Забронировал
                   {b.creator?.full_name ? `: ${b.creator.full_name}` : ': —'}
                   {b.created_at ? ` · ${formatCreated(b.created_at)}` : ''}
                 </span>
 
-                <div className="status-actions">
-                  {st !== 'arrived' && (
-                    <button className="btn-ghost sm" disabled={busy} onClick={() => changeStatus(b.id, 'arrived')}>Пришли</button>
-                  )}
-                  {st !== 'no_show' && (
-                    <button className="btn-ghost sm" disabled={busy} onClick={() => changeStatus(b.id, 'no_show')}>Не пришли</button>
-                  )}
-                  {st === 'cancelled' ? (
-                    <button className="btn-ghost sm" disabled={busy} onClick={() => changeStatus(b.id, 'booked')}>Вернуть</button>
-                  ) : (
-                    <button className="btn-ghost sm danger" disabled={busy} onClick={() => changeStatus(b.id, 'cancelled')}>Отменить</button>
-                  )}
-                </div>
+                <StatusControls
+                  booking={b}
+                  busy={busy}
+                  onChange={(status, reason) => changeStatus(b.id, status, reason)}
+                />
               </div>
               <div className="booking-actions">
                 <button className="btn-ghost sm" onClick={() => startEdit(b)}>Изменить</button>

@@ -95,8 +95,14 @@ export function useBookings(date) {
       .eq('id', id)
 
   // Смена статуса брони (пришли / не пришли / отменена / ожидается).
-  const setBookingStatus = (id, status) =>
-    supabase.from('bookings').update({ status }).eq('id', id)
+  // Причину (status_reason) храним только для no_show/cancelled,
+  // при возврате в активный статус — очищаем.
+  const setBookingStatus = (id, status, reason) => {
+    const needsReason = status === 'no_show' || status === 'cancelled'
+    return supabase.from('bookings')
+      .update({ status, status_reason: needsReason ? (reason ?? null) : null })
+      .eq('id', id)
+  }
 
   return {
     tables, bookings, loading, realtimeStatus,
