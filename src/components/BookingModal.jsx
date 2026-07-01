@@ -32,7 +32,8 @@ function validate(form) {
 }
 
 export default function BookingModal({
-  table, date, isAdmin, bookings, tables = [], onClose, onAdd, onUpdate, onDelete, onSetStatus,
+  table, date, isAdmin, bookings, tables = [], group = null, partyTablesById = {},
+  onClose, onAdd, onUpdate, onDelete, onSetStatus,
 }) {
   const empty = {
     guest_name: '', phone: '', guests_count: 2,
@@ -41,22 +42,30 @@ export default function BookingModal({
     table_id: table.id,
   }
   const [form, setForm] = useState(empty)
-  const [editingId, setEditingId] = useState(null)
+  const [editing, setEditing] = useState(null) // редактируемая бронь или null
+  const [bookWholeGroup, setBookWholeGroup] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const editingId = editing?.id
 
   // Закрытие по Esc + блокировка прокрутки фона под окном.
   useDismissable(onClose)
 
   const set = (field, value) => setForm((f) => ({ ...f, [field]: value }))
 
-  // Гостей больше вместимости стола — не блокируем (можно подставить стул),
-  // но показываем предупреждение.
-  const overCapacity = Number(form.guests_count) > table.capacity
+  // Стол входит в составную группу (2+ стола) — можно бронировать всю группу.
+  const groupTables = group?.tables?.length > 1 ? group.tables : null
+  const groupCapacity = groupTables
+    ? groupTables.reduce((s, t) => s + (t.capacity || 0), 0) : 0
 
-  const changeStatus = async (id, status, reason) => {
+  // Гостей больше вместимости стола — не блокируем (можно подставить стул),
+  // но показываем предупреждение. Для брони на всю группу сравниваем с суммой.
+  const capLimit = !editingId && bookWholeGroup && groupTables ? groupCapacity : table.capacity
+  const overCapacity = Number(form.guests_count) > capLimit
+
+  const changeStatus = async (booking, status, reason) => {
     setBusy(true); setError('')
-    const res = await onSetStatus?.(id, status, reason)
+    const res = await onSetStatus?.(booking, status, reason)
     setBusy(false)
     if (res?.error) setError('Не удалось изменить статус брони')
   }
@@ -84,13 +93,16 @@ export default function BookingModal({
     if (editingId) {
       // table_id включаем, чтобы админ мог перенести бронь на другой стол
       // (для офиков БД-триггер запретит смену стола).
-      result = await onUpdate(editingId, { ...payload, table_id: Number(form.table_id) })
+      result = await onUpdate(editing, { ...payload, table_id: Number(form.table_id) })
+    } else if (bookWholeGroup && groupTables) {
+      // Бронь на всю группу: по строке на каждый стол с общим party_id.
+      // Вставка массива атомарна — если любой стол занят, откатится вся бронь.
+      const partyId = crypto.randomUUID()
+      result = await onAdd(groupTables.map((t) => ({
+        ...payload, table_id: t.id, booking_date: date, party_id: partyId,
+      })))
     } else {
-      result = await onAdd({
-        ...payload,
-        table_id: table.id,
-        booking_date: date,
-      })
+      result = await onAdd({ ...payload, table_id: table.id, booking_date: date })
     }
 
     setBusy(false)
@@ -99,7 +111,7 @@ export default function BookingModal({
       const msg = result.error.message || ''
       // exclusion constraint при пересечении возвращает код 23P01
       if (result.error.code === '23P01' || msg.includes('no_overlap')) {
-        setError('Этот стол уже занят на выбранное время')
+        setError(bookWholeGroup ? 'Один из столов группы уже занят на это время' : 'Этот стол уже занят на выбранное время')
       } else if (msg.includes('phone')) {
         setError('Неверный формат телефона')
       } else if (msg.includes('guests_count')) {
@@ -115,11 +127,12 @@ export default function BookingModal({
     }
 
     setForm(empty)
-    setEditingId(null)
+    setEditing(null)
+    setBookWholeGroup(false)
   }
 
   const startEdit = (b) => {
-    setEditingId(b.id)
+    setEditing(b)
     setError('')
     setForm({
       guest_name: b.guest_name,
@@ -134,15 +147,15 @@ export default function BookingModal({
     })
   }
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (b) => {
     setBusy(true)
-    const result = await onDelete(id)
+    const result = await onDelete(b)
     setBusy(false)
     if (result.error) {
       setError('Удалять брони может только администратор')
       return
     }
-    if (editingId === id) { setEditingId(null); setForm(empty) }
+    if (editingId === b.id) { setEditing(null); setForm(empty) }
   }
 
   return (
@@ -168,6 +181,9 @@ export default function BookingModal({
                   <span className={`status-chip ${STATUS[st].cls}`}>{STATUS[st].label}</span>
                 </span>
                 <span className="booking-name">{b.guest_name}</span>
+                {b.party_id && partyTablesById[b.party_id]?.length > 1 && (
+                  <span className="booking-group">Столы {partyTablesById[b.party_id].join(', ')}</span>
+                )}
                 <span className="booking-meta">
                   {b.guests_count} чел.
                   {b.phone && <> · <PhoneLink phone={b.phone} /></>}
@@ -190,13 +206,13 @@ export default function BookingModal({
                 <StatusControls
                   booking={b}
                   busy={busy}
-                  onChange={(status, reason) => changeStatus(b.id, status, reason)}
+                  onChange={(status, reason) => changeStatus(b, status, reason)}
                 />
               </div>
               <div className="booking-actions">
                 <button className="btn-ghost sm" onClick={() => startEdit(b)}>Изменить</button>
                 {isAdmin && (
-                  <button className="btn-ghost sm danger" onClick={() => handleDelete(b.id)}>Удалить</button>
+                  <button className="btn-ghost sm danger" onClick={() => handleDelete(b)}>Удалить</button>
                 )}
               </div>
             </div>
@@ -224,7 +240,7 @@ export default function BookingModal({
             </div>
           </div>
 
-          {editingId && isAdmin && tables.length > 0 && (
+          {editingId && isAdmin && !editing?.party_id && tables.length > 0 && (
             <>
               <label className="field-label">Перенести на стол</label>
               <select className="field" value={form.table_id}
@@ -238,13 +254,26 @@ export default function BookingModal({
             </>
           )}
 
+          {!editingId && groupTables && (
+            <label className="checkbox-row">
+              <input type="checkbox" checked={bookWholeGroup}
+                onChange={(e) => setBookWholeGroup(e.target.checked)} />
+              <span>
+                Забронировать всю группу: столы {groupTables.map((t) => t.number).join('+')}
+                {' '}(до {groupCapacity} чел.)
+              </span>
+            </label>
+          )}
+
           <div className="field-row">
             <div>
               <label className="field-label">Гостей</label>
               <input className="field" type="number" min="1" value={form.guests_count}
                 onChange={(e) => set('guests_count', e.target.value)} />
               {overCapacity && (
-                <span className="field-warn">Стол на {table.capacity} чел.</span>
+                <span className="field-warn">
+                  {bookWholeGroup && groupTables ? `Группа на ${groupCapacity} чел.` : `Стол на ${table.capacity} чел.`}
+                </span>
               )}
             </div>
             <div>
@@ -277,12 +306,15 @@ export default function BookingModal({
 
           <div className="form-buttons">
             {editingId && (
-              <button className="btn-ghost" onClick={() => { setEditingId(null); setForm(empty); setError('') }}>
+              <button className="btn-ghost" onClick={() => { setEditing(null); setForm(empty); setError('') }}>
                 Отмена
               </button>
             )}
             <button className="btn-primary" onClick={handleSave} disabled={busy}>
-              {busy ? 'Сохранение…' : editingId ? 'Сохранить' : 'Добавить бронь'}
+              {busy ? 'Сохранение…'
+                : editingId ? 'Сохранить'
+                : (bookWholeGroup && groupTables) ? 'Забронировать группу'
+                : 'Добавить бронь'}
             </button>
           </div>
         </div>

@@ -1,12 +1,26 @@
 import { useState, useRef, useEffect } from 'react'
 import { useBookings } from '../hooks/useBookings'
 import { useAllBookings } from '../hooks/useAllBookings'
+import { useTableGroups } from '../hooks/useTableGroups'
 import TableShape from './TableShape'
 import BookingModal from './BookingModal'
 import BookingDetails from './BookingDetails'
 import BookingsList from './BookingsList'
+import TableGroupsPanel from './TableGroupsPanel'
 import DatePicker from './DatePicker'
 import { isActiveBooking } from '../lib/status'
+
+// party_id -> отсортированный список номеров столов «большой брони».
+function partyTableMap(bookingsArr, tables) {
+  const numById = Object.fromEntries(tables.map((t) => [t.id, t.number]))
+  const map = {}
+  for (const b of bookingsArr) {
+    if (!b.party_id) continue
+    ;(map[b.party_id] ||= []).push(numById[b.table_id])
+  }
+  for (const k of Object.keys(map)) map[k] = [...new Set(map[k])].sort((a, b) => a - b)
+  return map
+}
 
 const today = () => new Date().toISOString().slice(0, 10)
 
@@ -34,6 +48,7 @@ export default function FloorPlan({ isAdmin }) {
   const [date, setDate] = useState(today())
   const [activeTable, setActiveTable] = useState(null)
   const [detailBooking, setDetailBooking] = useState(null)
+  const [groupsOpen, setGroupsOpen] = useState(false)
   const [view, setView] = useState('plan') // 'plan' | 'list'
 
   const {
@@ -44,10 +59,35 @@ export default function FloorPlan({ isAdmin }) {
   // Для раздела «Список броней» — все предстоящие брони (любые даты).
   const { bookings: allBookings, refetch: refetchAll } = useAllBookings(view === 'list')
 
+  // Составные столы (группы).
+  const { groups, createGroup, removeGroup } = useTableGroups(true)
+  // Группа, которой принадлежит стол — с раскрытыми объектами столов.
+  const groupForTable = (tableId) => {
+    const g = groups.find((gr) => gr.tableIds.includes(tableId))
+    if (!g) return null
+    return { ...g, tables: g.tableIds.map((id) => tables.find((t) => t.id === id)).filter(Boolean) }
+  }
+
   // Смена статуса + немедленное обновление обоих списков (не ждём realtime,
   // иначе при «приостановленных обновлениях» нажатие выглядит как «не работает»).
-  const handleSetStatus = async (id, status, reason) => {
-    const res = await setBookingStatus(id, status, reason)
+  const handleSetStatus = async (booking, status, reason) => {
+    const res = await setBookingStatus(booking, status, reason)
+    if (!res?.error) { refetchBookings(); refetchAll() }
+    return res
+  }
+  const handleDelete = async (booking) => {
+    const res = await deleteBooking(booking)
+    if (!res?.error) { refetchBookings(); refetchAll() }
+    return res
+  }
+  // Добавление/редактирование тоже обновляют списки сразу (не ждём realtime).
+  const handleAdd = async (payload) => {
+    const res = await addBooking(payload)
+    if (!res?.error) { refetchBookings(); refetchAll() }
+    return res
+  }
+  const handleUpdate = async (booking, fields) => {
+    const res = await updateBooking(booking, fields)
     if (!res?.error) { refetchBookings(); refetchAll() }
     return res
   }
@@ -84,8 +124,17 @@ export default function FloorPlan({ isAdmin }) {
     bookings.filter((b) => b.table_id === tableId && isActiveBooking(b)).length
 
   // Сводка по выбранному дню: сколько активных броней и сколько гостей всего.
-  const activeToday = bookings.filter(isActiveBooking)
+  // «Большую бронь» (party) считаем как одну, гостей — один раз.
+  const seenParty = new Set()
+  const activeToday = bookings.filter((b) => {
+    if (!isActiveBooking(b)) return false
+    if (b.party_id) { if (seenParty.has(b.party_id)) return false; seenParty.add(b.party_id) }
+    return true
+  })
   const guestsToday = activeToday.reduce((sum, b) => sum + (b.guests_count || 0), 0)
+
+  // party_id -> номера столов (для подписи «Столы 7+8» в окне брони).
+  const partyTablesById = partyTableMap(bookings, tables)
 
   // Показываем только столы, для которых задана позиция в раскладке (11 убран).
   const placedTables = tables.filter((t) => LAYOUT[t.number])
@@ -122,6 +171,11 @@ export default function FloorPlan({ isAdmin }) {
           {activeToday.length > 0
             ? `Броней: ${activeToday.length} · гостей: ${guestsToday}`
             : 'На этот день броней нет'}
+          {isAdmin && (
+            <button className="link-btn inline" onClick={() => setGroupsOpen(true)}>
+              Составные столы
+            </button>
+          )}
         </div>
       )}
 
@@ -170,10 +224,12 @@ export default function FloorPlan({ isAdmin }) {
           isAdmin={isAdmin}
           bookings={bookingsFor(activeTable.id)}
           tables={tables}
+          group={groupForTable(activeTable.id)}
+          partyTablesById={partyTablesById}
           onClose={() => setActiveTable(null)}
-          onAdd={addBooking}
-          onUpdate={updateBooking}
-          onDelete={deleteBooking}
+          onAdd={handleAdd}
+          onUpdate={handleUpdate}
+          onDelete={handleDelete}
           onSetStatus={handleSetStatus}
         />
       )}
@@ -184,10 +240,21 @@ export default function FloorPlan({ isAdmin }) {
           // с откатом на исходный снимок, если бронь пропала из выборки.
           booking={allBookings.find((b) => b.id === detailBooking.id) || detailBooking}
           tableNumber={tables.find((t) => t.id === detailBooking.table_id)?.number ?? '—'}
+          partyTables={partyTableMap(allBookings, tables)[detailBooking.party_id]}
           isAdmin={isAdmin}
           onClose={() => setDetailBooking(null)}
           onSetStatus={handleSetStatus}
-          onDelete={deleteBooking}
+          onDelete={handleDelete}
+        />
+      )}
+
+      {groupsOpen && (
+        <TableGroupsPanel
+          tables={tables}
+          groups={groups}
+          onCreate={createGroup}
+          onRemove={removeGroup}
+          onClose={() => setGroupsOpen(false)}
         />
       )}
     </div>

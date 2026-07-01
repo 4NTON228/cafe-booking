@@ -9,7 +9,7 @@ import StatusControls from './StatusControls'
 // Только данные брони + управление статусом — БЕЗ формы создания новой брони.
 // Создавать брони можно только из схемы зала (клик по столу).
 export default function BookingDetails({
-  booking, tableNumber, isAdmin, onClose, onSetStatus, onDelete,
+  booking, tableNumber, partyTables, isAdmin, onClose, onSetStatus, onDelete,
 }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -19,14 +19,14 @@ export default function BookingDetails({
 
   const changeStatus = async (status, reason) => {
     setBusy(true); setError('')
-    const res = await onSetStatus(booking.id, status, reason)
+    const res = await onSetStatus(booking, status, reason)
     setBusy(false)
     if (res?.error) setError('Не удалось изменить статус')
   }
 
   const handleDelete = async () => {
     setBusy(true); setError('')
-    const res = await onDelete(booking.id)
+    const res = await onDelete(booking)
     setBusy(false)
     if (res?.error) { setError('Удалять брони может только администратор'); return }
     onClose()
@@ -48,6 +48,9 @@ export default function BookingDetails({
               <span className={`status-chip ${STATUS[st].cls}`}>{STATUS[st].label}</span>
             </span>
             <span className="booking-name">{booking.guest_name}</span>
+            {partyTables?.length > 1 && (
+              <span className="booking-group">Столы {partyTables.join(', ')}</span>
+            )}
             <span className="booking-meta">
               {booking.guests_count} чел.
               {booking.phone && <> · <PhoneLink phone={booking.phone} /></>}
