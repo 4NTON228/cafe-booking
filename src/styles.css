@@ -550,6 +550,34 @@ h1, h2, h3 {
 .status-chip.st-no_show   { background: #efd9cf; color: #9a5536; border-color: #d6a98f; }
 .status-chip.st-cancelled { background: #e6dccb; color: var(--muted); border-color: var(--line); }
 .status-chip.st-left      { background: #d8e2ec; color: #3c5a76; border-color: #a7bdd2; }
+.status-chip.st-pending   { background: #f0e2c2; color: #8a6d2a; border-color: #d9c48c; }
+
+/* Пометка (напр. «отправится при появлении сети») */
+.booking-note { font-size: 13px; color: var(--muted); font-style: italic; margin-top: 8px; }
+
+/* ===== Полоска состояния сети / синхронизации ===== */
+.offline-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+  padding: 8px 14px;
+  font-size: 14px;
+  text-align: center;
+}
+.offline-bar .offline-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.offline-bar.offline { background: #efd9cf; color: #9a5536; }
+.offline-bar.offline .offline-dot { background: #a4452f; }
+.offline-bar.syncing { background: var(--free); color: var(--gold-deep); }
+.offline-bar.syncing .offline-dot { background: var(--gold); }
+.offline-bar.rejected { background: #f6d9cf; color: #8a3a25; }
+.offline-dismiss {
+  border: none; background: transparent; color: inherit;
+  font-size: 18px; line-height: 1; cursor: pointer; padding: 0 4px; margin-left: 6px;
+}
+:root[data-theme="dark"] .offline-bar.offline { background: #3a221a; color: #e3a584; }
+:root[data-theme="dark"] .offline-bar.rejected { background: #422018; color: #f0967b; }
+:root[data-theme="dark"] .status-chip.st-pending { background: #3d3320; color: #d8b25e; border-color: #5c4d2c; }
 
 :root[data-theme="dark"] .status-chip.st-arrived   { background: #2c3d24; color: #b6d6a6; border-color: #44572f; }
 :root[data-theme="dark"] .status-chip.st-no_show   { background: #44291d; color: #e3a584; border-color: #6b3f2b; }

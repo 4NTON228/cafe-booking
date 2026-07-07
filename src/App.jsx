@@ -8,6 +8,7 @@ import Blocked from './components/Blocked'
 import FloorPlan from './components/FloorPlan'
 import StaffPanel from './components/StaffPanel'
 import ConnectionError from './components/ConnectionError'
+import OfflineBar from './components/OfflineBar'
 
 export default function App() {
   // Тему применяем глобально (в т.ч. на экране входа), даже если БД не настроена.
@@ -75,6 +76,7 @@ function AuthedApp({ theme }) {
         </div>
       </header>
 
+      <OfflineBar />
       <FloorPlan isAdmin={isAdmin} />
 
       {staffOpen && (
