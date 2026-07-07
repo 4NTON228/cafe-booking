@@ -86,6 +86,7 @@ export default function BookingsList({ bookings, tables, onSelect }) {
                   <span className="day-time">
                     {timeRange(b.start_time, b.duration_min)}
                     <span className={`status-chip ${STATUS[st].cls}`}>{STATUS[st].label}</span>
+                    {b._pending && <span className="status-chip st-pending">не отправлено</span>}
                   </span>
                   <span className="day-guest">{b.guest_name}</span>
                   {nums && <span className="booking-group">Столы {nums.join(', ')}</span>}

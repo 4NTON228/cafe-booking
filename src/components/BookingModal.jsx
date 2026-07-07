@@ -110,7 +110,7 @@ export default function BookingModal({
     if (result.error) {
       const msg = result.error.message || ''
       // exclusion constraint при пересечении возвращает код 23P01
-      if (result.error.code === '23P01' || msg.includes('no_overlap')) {
+      if (result.error.code === '23P01' || result.error.code === 'local_overlap' || msg.includes('no_overlap')) {
         setError(bookWholeGroup ? 'Один из столов группы уже занят на это время' : 'Этот стол уже занят на выбранное время')
       } else if (msg.includes('phone')) {
         setError('Неверный формат телефона')
@@ -179,6 +179,7 @@ export default function BookingModal({
                 <span className="booking-time">
                   {b.start_time.slice(0, 5)}–{endTime(b.start_time, b.duration_min)}
                   <span className={`status-chip ${STATUS[st].cls}`}>{STATUS[st].label}</span>
+                  {b._pending && <span className="status-chip st-pending">не отправлено</span>}
                 </span>
                 <span className="booking-name">{b.guest_name}</span>
                 {b.party_id && partyTablesById[b.party_id]?.length > 1 && (
@@ -203,18 +204,24 @@ export default function BookingModal({
                   {b.created_at ? ` · ${formatCreated(b.created_at)}` : ''}
                 </span>
 
-                <StatusControls
-                  booking={b}
-                  busy={busy}
-                  onChange={(status, reason) => changeStatus(b, status, reason)}
-                />
+                {b._pending
+                  ? <span className="booking-note">Отправится, когда появится сеть</span>
+                  : (
+                    <StatusControls
+                      booking={b}
+                      busy={busy}
+                      onChange={(status, reason) => changeStatus(b, status, reason)}
+                    />
+                  )}
               </div>
-              <div className="booking-actions">
-                <button className="btn-ghost sm" onClick={() => startEdit(b)}>Изменить</button>
-                {isAdmin && (
-                  <button className="btn-ghost sm danger" onClick={() => handleDelete(b)}>Удалить</button>
-                )}
-              </div>
+              {!b._pending && (
+                <div className="booking-actions">
+                  <button className="btn-ghost sm" onClick={() => startEdit(b)}>Изменить</button>
+                  {isAdmin && (
+                    <button className="btn-ghost sm danger" onClick={() => handleDelete(b)}>Удалить</button>
+                  )}
+                </div>
+              )}
             </div>
             )
           })}

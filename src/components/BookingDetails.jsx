@@ -46,6 +46,7 @@ export default function BookingDetails({
             <span className="booking-time">
               {booking.start_time.slice(0, 5)}–{endTime(booking.start_time, booking.duration_min)}
               <span className={`status-chip ${STATUS[st].cls}`}>{STATUS[st].label}</span>
+              {booking._pending && <span className="status-chip st-pending">не отправлено</span>}
             </span>
             <span className="booking-name">{booking.guest_name}</span>
             {partyTables?.length > 1 && (
@@ -72,12 +73,18 @@ export default function BookingDetails({
 
         {error && <div className="error-text">{error}</div>}
 
-        <div className="details-actions">
-          <StatusControls booking={booking} busy={busy} onChange={changeStatus} />
-          {isAdmin && (
-            <button className="btn-ghost sm danger" disabled={busy} onClick={handleDelete}>Удалить</button>
-          )}
-        </div>
+        {booking._pending ? (
+          <div className="booking-note" style={{ marginTop: 14 }}>
+            Бронь ещё не отправлена — уйдёт на сервер, когда появится сеть.
+          </div>
+        ) : (
+          <div className="details-actions">
+            <StatusControls booking={booking} busy={busy} onChange={changeStatus} />
+            {isAdmin && (
+              <button className="btn-ghost sm danger" disabled={busy} onClick={handleDelete}>Удалить</button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
