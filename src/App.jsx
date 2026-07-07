@@ -9,6 +9,7 @@ import FloorPlan from './components/FloorPlan'
 import StaffPanel from './components/StaffPanel'
 import ConnectionError from './components/ConnectionError'
 import OfflineBar from './components/OfflineBar'
+import PushButton from './components/PushButton'
 
 export default function App() {
   // Тему применяем глобально (в т.ч. на экране входа), даже если БД не настроена.
@@ -59,6 +60,7 @@ function AuthedApp({ theme }) {
                 скрытые админы (role='staff') его не показывают. */}
             {profile?.role === 'admin' && <span className="role-badge">админ</span>}
           </span>
+          <PushButton />
           <button
             className="btn-ghost icon-btn"
             onClick={theme.toggle}
