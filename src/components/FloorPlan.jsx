@@ -50,6 +50,7 @@ export default function FloorPlan({ isAdmin }) {
   const [detailBooking, setDetailBooking] = useState(null)
   const [groupsOpen, setGroupsOpen] = useState(false)
   const [pickGuests, setPickGuests] = useState('') // «подобрать стол на N чел.»
+  const [comboBooking, setComboBooking] = useState(null) // столы для брони «вместе»
   const [view, setView] = useState('plan') // 'plan' | 'list'
 
   const {
@@ -137,11 +138,34 @@ export default function FloorPlan({ isAdmin }) {
   // party_id -> номера столов (для подписи «Столы 7+8» в окне брони).
   const partyTablesById = partyTableMap(bookings, tables)
 
-  // Режим «подобрать стол»: сколько гостей ищем.
-  const pickN = Number(pickGuests) || 0
-
   // Показываем только столы, для которых задана позиция в раскладке (11 убран).
   const placedTables = tables.filter((t) => LAYOUT[t.number])
+
+  // ===== Режим «подобрать стол» =====
+  const pickN = Number(pickGuests) || 0
+  const freeTables = placedTables.filter((t) => activeCountFor(t.id) === 0)
+  const singleFits = pickN > 0 && freeTables.some((t) => t.capacity >= pickN)
+
+  // Если одного стола мало — жадно объединяем свободные столы (крупные вперёд),
+  // пока не наберём вместимость под компанию. Так подбор помогает и на 30 чел.
+  let combo = []
+  let comboCap = 0
+  if (pickN > 0 && !singleFits) {
+    const sorted = [...freeTables].sort((a, b) => b.capacity - a.capacity)
+    for (const t of sorted) {
+      combo.push(t); comboCap += t.capacity
+      if (comboCap >= pickN) break
+    }
+  }
+  const comboIds = new Set(combo.map((t) => t.id))
+  const comboNums = combo.map((t) => t.number).sort((a, b) => a - b)
+
+  // Подсветка стола в режиме подбора.
+  const tableHighlight = (t) => {
+    if (pickN <= 0) return false
+    if (singleFits) return activeCountFor(t.id) === 0 && t.capacity >= pickN
+    return comboIds.has(t.id)
+  }
 
   return (
     <div className="floor-wrap">
@@ -184,22 +208,48 @@ export default function FloorPlan({ isAdmin }) {
       )}
 
       {view === 'plan' && tables.length > 0 && (
-        <div className="pick-row">
-          <span>Подобрать стол на</span>
-          <input
-            className="pick-input"
-            type="number"
-            min="1"
-            inputMode="numeric"
-            placeholder="—"
-            value={pickGuests}
-            onChange={(e) => setPickGuests(e.target.value)}
-          />
-          <span>чел.</span>
-          {pickN > 0 && (
-            <button className="link-btn inline" onClick={() => setPickGuests('')}>сброс</button>
+        <>
+          <div className="pick-row">
+            <span>Подобрать стол на</span>
+            <input
+              className="pick-input"
+              type="number"
+              min="1"
+              inputMode="numeric"
+              placeholder="—"
+              value={pickGuests}
+              onChange={(e) => setPickGuests(e.target.value)}
+            />
+            <span>чел.</span>
+            {pickN > 0 && (
+              <button className="link-btn inline" onClick={() => setPickGuests('')}>сброс</button>
+            )}
+          </div>
+
+          {pickN > 0 && !singleFits && (
+            <div className="pick-hint">
+              {combo.length > 1 && comboCap >= pickN ? (
+                <>
+                  Одного стола мало. Объединить столы {comboNums.join(', ')} (вместе до {comboCap} чел.)
+                  <button className="btn-primary sm" onClick={() => { setComboBooking(combo); setActiveTable(combo[0]) }}>
+                    Забронировать вместе
+                  </button>
+                </>
+              ) : combo.length > 0 ? (
+                <>
+                  Свободных мест только {comboCap} — на {pickN} чел. не хватает.
+                  {comboCap > 0 && (
+                    <button className="btn-primary sm" onClick={() => { setComboBooking(combo); setActiveTable(combo[0]) }}>
+                      Забронировать что есть (столы {comboNums.join(', ')})
+                    </button>
+                  )}
+                </>
+              ) : (
+                <>Свободных столов нет.</>
+              )}
+            </div>
           )}
-        </div>
+        </>
       )}
 
       {tables.length === 0 ? (
@@ -220,9 +270,7 @@ export default function FloorPlan({ isAdmin }) {
               }}
             >
               {placedTables.map((t) => {
-                const free = activeCountFor(t.id) === 0
-                const suitable = pickN > 0 && free && t.capacity >= pickN
-                const notSuitable = pickN > 0 && !suitable
+                const hi = tableHighlight(t)
                 return (
                   <TableShape
                     key={t.id}
@@ -230,8 +278,8 @@ export default function FloorPlan({ isAdmin }) {
                     x={LAYOUT[t.number].x}
                     y={LAYOUT[t.number].y}
                     bookingsCount={activeCountFor(t.id)}
-                    highlight={suitable}
-                    dim={notSuitable}
+                    highlight={hi}
+                    dim={pickN > 0 && !hi}
                     onClick={setActiveTable}
                   />
                 )
@@ -254,10 +302,12 @@ export default function FloorPlan({ isAdmin }) {
           isAdmin={isAdmin}
           bookings={bookingsFor(activeTable.id)}
           tables={tables}
-          group={groupForTable(activeTable.id)}
+          // При «Забронировать вместе» подставляем объединение как разовую группу.
+          group={comboBooking ? { name: 'Объединение', tables: comboBooking } : groupForTable(activeTable.id)}
+          initialWholeGroup={!!comboBooking}
           partyTablesById={partyTablesById}
           initialGuests={pickN > 0 ? pickN : null}
-          onClose={() => setActiveTable(null)}
+          onClose={() => { setActiveTable(null); setComboBooking(null) }}
           onAdd={handleAdd}
           onUpdate={handleUpdate}
           onDelete={handleDelete}
