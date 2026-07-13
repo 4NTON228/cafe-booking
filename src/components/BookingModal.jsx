@@ -35,7 +35,7 @@ function validate(form) {
 
 export default function BookingModal({
   table, date, isAdmin, bookings, tables = [], group = null, partyTablesById = {},
-  initialGuests = null, onClose, onAdd, onUpdate, onDelete, onSetStatus,
+  initialGuests = null, initialWholeGroup = false, onClose, onAdd, onUpdate, onDelete, onSetStatus,
 }) {
   const empty = {
     guest_name: '', phone: '', guests_count: initialGuests || 2,
@@ -45,7 +45,7 @@ export default function BookingModal({
   }
   const [form, setForm] = useState(empty)
   const [editing, setEditing] = useState(null) // редактируемая бронь или null
-  const [bookWholeGroup, setBookWholeGroup] = useState(false)
+  const [bookWholeGroup, setBookWholeGroup] = useState(initialWholeGroup)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const editingId = editing?.id
