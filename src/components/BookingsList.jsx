@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { timeRange, formatCreated } from '../lib/time'
 import { STATUS, statusOf, reasonPrefix } from '../lib/status'
+import { tagLabel } from '../lib/tags'
 import PhoneLink from './PhoneLink'
 
 // Заголовок даты: «Пятница, 10 июля».
@@ -90,6 +91,11 @@ export default function BookingsList({ bookings, tables, onSelect }) {
                   </span>
                   <span className="day-guest">{b.guest_name}</span>
                   {nums && <span className="booking-group">Столы {nums.join(', ')}</span>}
+                  {b.tags?.length > 0 && (
+                    <span className="tag-chips">
+                      {b.tags.map((t) => <span key={t} className="tag-chip">{tagLabel(t)}</span>)}
+                    </span>
+                  )}
                   <span className="day-meta">
                     {b.guests_count} чел.
                     {b.phone && <> · <PhoneLink phone={b.phone} /></>}
