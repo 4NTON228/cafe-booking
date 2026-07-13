@@ -49,6 +49,7 @@ export default function FloorPlan({ isAdmin }) {
   const [activeTable, setActiveTable] = useState(null)
   const [detailBooking, setDetailBooking] = useState(null)
   const [groupsOpen, setGroupsOpen] = useState(false)
+  const [pickGuests, setPickGuests] = useState('') // «подобрать стол на N чел.»
   const [view, setView] = useState('plan') // 'plan' | 'list'
 
   const {
@@ -136,6 +137,9 @@ export default function FloorPlan({ isAdmin }) {
   // party_id -> номера столов (для подписи «Столы 7+8» в окне брони).
   const partyTablesById = partyTableMap(bookings, tables)
 
+  // Режим «подобрать стол»: сколько гостей ищем.
+  const pickN = Number(pickGuests) || 0
+
   // Показываем только столы, для которых задана позиция в раскладке (11 убран).
   const placedTables = tables.filter((t) => LAYOUT[t.number])
 
@@ -179,6 +183,25 @@ export default function FloorPlan({ isAdmin }) {
         </div>
       )}
 
+      {view === 'plan' && tables.length > 0 && (
+        <div className="pick-row">
+          <span>Подобрать стол на</span>
+          <input
+            className="pick-input"
+            type="number"
+            min="1"
+            inputMode="numeric"
+            placeholder="—"
+            value={pickGuests}
+            onChange={(e) => setPickGuests(e.target.value)}
+          />
+          <span>чел.</span>
+          {pickN > 0 && (
+            <button className="link-btn inline" onClick={() => setPickGuests('')}>сброс</button>
+          )}
+        </div>
+      )}
+
       {tables.length === 0 ? (
         <div className="floor-loading">Загрузка зала…</div>
       ) : view === 'plan' ? (
@@ -196,16 +219,23 @@ export default function FloorPlan({ isAdmin }) {
                 transformOrigin: 'top left',
               }}
             >
-              {placedTables.map((t) => (
-                <TableShape
-                  key={t.id}
-                  table={t}
-                  x={LAYOUT[t.number].x}
-                  y={LAYOUT[t.number].y}
-                  bookingsCount={activeCountFor(t.id)}
-                  onClick={setActiveTable}
-                />
-              ))}
+              {placedTables.map((t) => {
+                const free = activeCountFor(t.id) === 0
+                const suitable = pickN > 0 && free && t.capacity >= pickN
+                const notSuitable = pickN > 0 && !suitable
+                return (
+                  <TableShape
+                    key={t.id}
+                    table={t}
+                    x={LAYOUT[t.number].x}
+                    y={LAYOUT[t.number].y}
+                    bookingsCount={activeCountFor(t.id)}
+                    highlight={suitable}
+                    dim={notSuitable}
+                    onClick={setActiveTable}
+                  />
+                )
+              })}
             </div>
           </div>
         </div>
@@ -226,6 +256,7 @@ export default function FloorPlan({ isAdmin }) {
           tables={tables}
           group={groupForTable(activeTable.id)}
           partyTablesById={partyTablesById}
+          initialGuests={pickN > 0 ? pickN : null}
           onClose={() => setActiveTable(null)}
           onAdd={handleAdd}
           onUpdate={handleUpdate}

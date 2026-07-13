@@ -2,8 +2,10 @@ import { useState } from 'react'
 import { endTime, formatCreated } from '../lib/time'
 import { useDismissable } from '../hooks/useDismissable'
 import { STATUS, statusOf, reasonPrefix } from '../lib/status'
+import { TAGS, tagLabel } from '../lib/tags'
 import PhoneLink from './PhoneLink'
 import StatusControls from './StatusControls'
+import BookingHistory from './BookingHistory'
 
 // Длительность брони в минутах из времени начала и конца.
 // Если конец раньше или равен началу — считаем, что бронь через полночь.
@@ -33,13 +35,13 @@ function validate(form) {
 
 export default function BookingModal({
   table, date, isAdmin, bookings, tables = [], group = null, partyTablesById = {},
-  onClose, onAdd, onUpdate, onDelete, onSetStatus,
+  initialGuests = null, onClose, onAdd, onUpdate, onDelete, onSetStatus,
 }) {
   const empty = {
-    guest_name: '', phone: '', guests_count: 2,
+    guest_name: '', phone: '', guests_count: initialGuests || 2,
     start_time: '18:00', end_time: '20:00',
     has_preorder: false, preorder_text: '', comment: '',
-    table_id: table.id,
+    table_id: table.id, tags: [],
   }
   const [form, setForm] = useState(empty)
   const [editing, setEditing] = useState(null) // редактируемая бронь или null
@@ -52,6 +54,9 @@ export default function BookingModal({
   useDismissable(onClose)
 
   const set = (field, value) => setForm((f) => ({ ...f, [field]: value }))
+  const toggleTag = (key) => setForm((f) => ({
+    ...f, tags: f.tags.includes(key) ? f.tags.filter((t) => t !== key) : [...f.tags, key],
+  }))
 
   // Стол входит в составную группу (2+ стола) — можно бронировать всю группу.
   const groupTables = group?.tables?.length > 1 ? group.tables : null
@@ -87,6 +92,7 @@ export default function BookingModal({
       has_preorder: form.has_preorder,
       preorder_text: form.has_preorder ? form.preorder_text.trim() : null,
       comment: form.comment.trim() || null,
+      tags: form.tags,
     }
 
     let result
@@ -144,6 +150,7 @@ export default function BookingModal({
       preorder_text: b.preorder_text || '',
       comment: b.comment || '',
       table_id: b.table_id,
+      tags: b.tags || [],
     })
   }
 
@@ -185,6 +192,11 @@ export default function BookingModal({
                 {b.party_id && partyTablesById[b.party_id]?.length > 1 && (
                   <span className="booking-group">Столы {partyTablesById[b.party_id].join(', ')}</span>
                 )}
+                {b.tags?.length > 0 && (
+                  <span className="tag-chips">
+                    {b.tags.map((t) => <span key={t} className="tag-chip">{tagLabel(t)}</span>)}
+                  </span>
+                )}
                 <span className="booking-meta">
                   {b.guests_count} чел.
                   {b.phone && <> · <PhoneLink phone={b.phone} /></>}
@@ -207,11 +219,14 @@ export default function BookingModal({
                 {b._pending
                   ? <span className="booking-note">Отправится, когда появится сеть</span>
                   : (
-                    <StatusControls
-                      booking={b}
-                      busy={busy}
-                      onChange={(status, reason) => changeStatus(b, status, reason)}
-                    />
+                    <>
+                      <StatusControls
+                        booking={b}
+                        busy={busy}
+                        onChange={(status, reason) => changeStatus(b, status, reason)}
+                      />
+                      <BookingHistory bookingId={b.id} />
+                    </>
                   )}
               </div>
               {!b._pending && (
@@ -308,6 +323,20 @@ export default function BookingModal({
           <label className="field-label">Комментарий</label>
           <textarea className="field" rows="2" value={form.comment}
             onChange={(e) => set('comment', e.target.value)} />
+
+          <label className="field-label">Метки</label>
+          <div className="tag-picker">
+            {TAGS.map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                className={`tag-pick ${form.tags.includes(t.key) ? 'on' : ''}`}
+                onClick={() => toggleTag(t.key)}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
 
           {error && <div className="error-text">{error}</div>}
 

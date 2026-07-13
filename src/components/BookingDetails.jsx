@@ -2,8 +2,10 @@ import { useState } from 'react'
 import { endTime, formatCreated } from '../lib/time'
 import { useDismissable } from '../hooks/useDismissable'
 import { STATUS, statusOf, reasonPrefix } from '../lib/status'
+import { tagLabel } from '../lib/tags'
 import PhoneLink from './PhoneLink'
 import StatusControls from './StatusControls'
+import BookingHistory from './BookingHistory'
 
 // Окно просмотра одной брони (открывается из «Списка броней»).
 // Только данные брони + управление статусом — БЕЗ формы создания новой брони.
@@ -52,6 +54,11 @@ export default function BookingDetails({
             {partyTables?.length > 1 && (
               <span className="booking-group">Столы {partyTables.join(', ')}</span>
             )}
+            {booking.tags?.length > 0 && (
+              <span className="tag-chips">
+                {booking.tags.map((t) => <span key={t} className="tag-chip">{tagLabel(t)}</span>)}
+              </span>
+            )}
             <span className="booking-meta">
               {booking.guests_count} чел.
               {booking.phone && <> · <PhoneLink phone={booking.phone} /></>}
@@ -68,6 +75,7 @@ export default function BookingDetails({
               {booking.creator?.full_name ? `: ${booking.creator.full_name}` : ': —'}
               {booking.created_at ? ` · ${formatCreated(booking.created_at)}` : ''}
             </span>
+            {!booking._pending && <BookingHistory bookingId={booking.id} />}
           </div>
         </div>
 

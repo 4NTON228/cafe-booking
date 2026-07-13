@@ -662,6 +662,68 @@ h1, h2, h3 {
   font-size: 13px;
 }
 
+/* ===== Метки на брони ===== */
+.tag-chips { display: flex; flex-wrap: wrap; gap: 5px; margin: 1px 0; }
+.tag-chip {
+  font-size: 11px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--free);
+  color: var(--gold-deep);
+  border: 1px solid var(--free-border);
+}
+.tag-picker { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.tag-pick {
+  padding: 5px 11px;
+  border: 1px solid var(--free-border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.tag-pick.on { background: var(--gold-deep); border-color: var(--gold-deep); color: #fdf8ec; }
+
+/* ===== История брони ===== */
+.history { margin-top: 8px; }
+.history-list {
+  margin-top: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--field-bg);
+}
+.history-row { font-size: 13px; color: var(--ink); margin: 2px 0; }
+.history-at { color: var(--muted); }
+
+/* ===== Подбор стола ===== */
+.pick-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.pick-input {
+  width: 64px;
+  padding: 6px 8px;
+  border: 1px solid var(--free-border);
+  border-radius: 8px;
+  background: var(--field-bg);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 15px;
+  text-align: center;
+}
+.table-shape.suggest {
+  box-shadow: 0 0 0 4px rgba(176, 141, 62, 0.35);
+  border-color: var(--gold-deep);
+}
+.table-shape.dim { opacity: 0.35; }
+
 /* Выбор столов при создании группы */
 .table-picker { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
 .table-pick {
