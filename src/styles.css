@@ -13,6 +13,10 @@
   --line: #ddceb0;
   --field-bg: #fff;
   --row-bg: #fff;
+  /* Заливка золотых кнопок/вкладок (со светлым текстом на тёмном золоте). */
+  --btn-bg: #8a6d2a;
+  --btn-bg-hover: #b08d3e;
+  --btn-text: #fdf8ec;
   color-scheme: light;
 }
 
@@ -33,6 +37,11 @@
   --line: #3d3322;
   --field-bg: #1a150e;
   --row-bg: #2c2419;
+  /* В тёмной теме золото приглушённое (не «неоновое»), текст тёмный —
+     кнопки не режут глаз и текст на них не сливается. */
+  --btn-bg: #b8923f;
+  --btn-bg-hover: #caa350;
+  --btn-text: #201908;
   color-scheme: dark;
 }
 
@@ -148,14 +157,14 @@ h1, h2, h3 {
   padding: 12px;
   border: none;
   border-radius: 9px;
-  background: var(--gold-deep);
-  color: #fdf8ec;
+  background: var(--btn-bg);
+  color: var(--btn-text);
   font-family: 'Cormorant Garamond', serif;
   font-size: 18px;
   font-weight: 600;
   cursor: pointer;
 }
-.btn-primary:hover { background: var(--gold); }
+.btn-primary:hover { background: var(--btn-bg-hover); }
 .btn-primary:disabled { opacity: 0.6; cursor: default; }
 
 .btn-ghost {
@@ -184,8 +193,8 @@ h1, h2, h3 {
 .header-right { display: flex; align-items: center; gap: 14px; }
 .user-name { color: var(--muted); font-size: 14px; display: flex; align-items: center; gap: 8px; }
 .role-badge {
-  background: var(--gold-deep);
-  color: #fdf8ec;
+  background: var(--btn-bg);
+  color: var(--btn-text);
   font-size: 11px;
   padding: 2px 8px;
   border-radius: 10px;
@@ -310,8 +319,8 @@ h1, h2, h3 {
   top: -6px; right: -6px;
   min-width: 22px; height: 22px;
   border-radius: 11px;
-  background: var(--gold-deep);
-  color: #fdf8ec;
+  background: var(--btn-bg);
+  color: var(--btn-text);
   font-size: 13px;
   display: flex;
   align-items: center;
@@ -448,9 +457,9 @@ h1, h2, h3 {
 }
 .view-tab:hover { background: var(--free); }
 .view-tab.active {
-  background: var(--gold-deep);
-  border-color: var(--gold-deep);
-  color: #fdf8ec;
+  background: var(--btn-bg);
+  border-color: var(--btn-bg);
+  color: var(--btn-text);
 }
 
 
@@ -683,7 +692,7 @@ h1, h2, h3 {
   font-size: 13px;
   cursor: pointer;
 }
-.tag-pick.on { background: var(--gold-deep); border-color: var(--gold-deep); color: #fdf8ec; }
+.tag-pick.on { background: var(--btn-bg); border-color: var(--btn-bg); color: var(--btn-text); }
 
 /* ===== История брони ===== */
 .history { margin-top: 8px; }
@@ -771,9 +780,9 @@ h1, h2, h3 {
   cursor: pointer;
 }
 .table-pick.on {
-  background: var(--gold-deep);
-  border-color: var(--gold-deep);
-  color: #fdf8ec;
+  background: var(--btn-bg);
+  border-color: var(--btn-bg);
+  color: var(--btn-text);
 }
 
 /* ===== Адаптив ===== */
