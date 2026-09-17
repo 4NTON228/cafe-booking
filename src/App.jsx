@@ -10,6 +10,7 @@ import StaffPanel from './components/StaffPanel'
 import ConnectionError from './components/ConnectionError'
 import OfflineBar from './components/OfflineBar'
 import PushButton from './components/PushButton'
+import ErrorBoundary from './components/ErrorBoundary'
 
 export default function App() {
   // Тему применяем глобально (в т.ч. на экране входа), даже если БД не настроена.
@@ -79,7 +80,9 @@ function AuthedApp({ theme }) {
       </header>
 
       <OfflineBar />
-      <FloorPlan isAdmin={isAdmin} />
+      <ErrorBoundary>
+        <FloorPlan isAdmin={isAdmin} />
+      </ErrorBoundary>
 
       {staffOpen && (
         <StaffPanel
