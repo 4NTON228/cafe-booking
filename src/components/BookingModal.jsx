@@ -1,21 +1,11 @@
 import { useState } from 'react'
-import { endTime, formatCreated } from '../lib/time'
+import { endTime, formatCreated, durationFromTimes } from '../lib/time'
 import { useDismissable } from '../hooks/useDismissable'
 import { STATUS, statusOf, reasonPrefix } from '../lib/status'
 import { TAGS, tagLabel } from '../lib/tags'
 import PhoneLink from './PhoneLink'
 import StatusControls from './StatusControls'
 import BookingHistory from './BookingHistory'
-
-// Длительность брони в минутах из времени начала и конца.
-// Если конец раньше или равен началу — считаем, что бронь через полночь.
-function durationFromTimes(start, end) {
-  const [sh, sm] = start.split(':').map(Number)
-  const [eh, em] = end.split(':').map(Number)
-  let diff = (eh * 60 + em) - (sh * 60 + sm)
-  if (diff <= 0) diff += 1440
-  return diff
-}
 
 // Клиентская валидация — для быстрого отклика.
 // Настоящая защита в БД (CHECK + exclusion constraint), это лишь UX.
@@ -46,6 +36,9 @@ export default function BookingModal({
   const [form, setForm] = useState(empty)
   const [editing, setEditing] = useState(null) // редактируемая бронь или null
   const [bookWholeGroup, setBookWholeGroup] = useState(initialWholeGroup)
+  // Необязательные поля (телефон, предзаказ, комментарий, метки) прячем под «Ещё»,
+  // чтобы форма была короткой — как строчка в блокноте.
+  const [showMore, setShowMore] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const editingId = editing?.id
@@ -140,6 +133,8 @@ export default function BookingModal({
   const startEdit = (b) => {
     setEditing(b)
     setError('')
+    // Если у брони есть необязательные поля — сразу раскрываем «Ещё».
+    setShowMore(Boolean(b.phone || b.comment || b.has_preorder || (b.tags?.length)))
     setForm({
       guest_name: b.guest_name,
       phone: b.phone || '',
@@ -298,45 +293,56 @@ export default function BookingModal({
                 </span>
               )}
             </div>
-            <div>
+          </div>
+
+          <button
+            type="button"
+            className="link-btn more-toggle"
+            onClick={() => setShowMore((v) => !v)}
+          >
+            {showMore ? 'Скрыть' : 'Ещё'} — телефон, предзаказ, комментарий, метки
+          </button>
+
+          {showMore && (
+            <div className="more-fields">
               <label className="field-label">Телефон</label>
               <input className="field" value={form.phone}
                 onChange={(e) => set('phone', e.target.value)} />
+
+              <label className="checkbox-row">
+                <input type="checkbox" checked={form.has_preorder}
+                  onChange={(e) => set('has_preorder', e.target.checked)} />
+                <span>Есть предзаказ</span>
+              </label>
+
+              {form.has_preorder && (
+                <>
+                  <label className="field-label">Что заказали заранее</label>
+                  <textarea className="field" rows="2" value={form.preorder_text}
+                    onChange={(e) => set('preorder_text', e.target.value)}
+                    placeholder="Напр.: 2 стейка, бутылка вина к 19:00" />
+                </>
+              )}
+
+              <label className="field-label">Комментарий</label>
+              <textarea className="field" rows="2" value={form.comment}
+                onChange={(e) => set('comment', e.target.value)} />
+
+              <label className="field-label">Метки</label>
+              <div className="tag-picker">
+                {TAGS.map((t) => (
+                  <button
+                    key={t.key}
+                    type="button"
+                    className={`tag-pick ${form.tags.includes(t.key) ? 'on' : ''}`}
+                    onClick={() => toggleTag(t.key)}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-
-          <label className="checkbox-row">
-            <input type="checkbox" checked={form.has_preorder}
-              onChange={(e) => set('has_preorder', e.target.checked)} />
-            <span>Есть предзаказ</span>
-          </label>
-
-          {form.has_preorder && (
-            <>
-              <label className="field-label">Что заказали заранее</label>
-              <textarea className="field" rows="2" value={form.preorder_text}
-                onChange={(e) => set('preorder_text', e.target.value)}
-                placeholder="Напр.: 2 стейка, бутылка вина к 19:00" />
-            </>
           )}
-
-          <label className="field-label">Комментарий</label>
-          <textarea className="field" rows="2" value={form.comment}
-            onChange={(e) => set('comment', e.target.value)} />
-
-          <label className="field-label">Метки</label>
-          <div className="tag-picker">
-            {TAGS.map((t) => (
-              <button
-                key={t.key}
-                type="button"
-                className={`tag-pick ${form.tags.includes(t.key) ? 'on' : ''}`}
-                onClick={() => toggleTag(t.key)}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
 
           {error && <div className="error-text">{error}</div>}
 
