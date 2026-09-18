@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
 import { useBookings } from '../hooks/useBookings'
+import { useAllBookings } from '../hooks/useAllBookings'
 import { useTableGroups } from '../hooks/useTableGroups'
 import TableShape from './TableShape'
 import BookingModal from './BookingModal'
-import QuickBookingModal from './QuickBookingModal'
+import BookingDetails from './BookingDetails'
 import BookingsList from './BookingsList'
 import TableGroupsPanel from './TableGroupsPanel'
 import DatePicker from './DatePicker'
@@ -46,16 +47,19 @@ const LAYOUT = {
 export default function FloorPlan({ isAdmin }) {
   const [date, setDate] = useState(today())
   const [activeTable, setActiveTable] = useState(null)
+  const [detailBooking, setDetailBooking] = useState(null)
   const [groupsOpen, setGroupsOpen] = useState(false)
-  const [quickOpen, setQuickOpen] = useState(false) // окно быстрой брони
   const [pickGuests, setPickGuests] = useState('') // «подобрать стол на N чел.»
   const [comboBooking, setComboBooking] = useState(null) // столы для брони «вместе»
-  const [view, setView] = useState('list') // 'list' | 'plan' — по умолчанию простой список
+  const [view, setView] = useState('plan') // 'plan' | 'list'
 
   const {
     tables, bookings, loading, realtimeStatus,
     addBooking, updateBooking, deleteBooking, setBookingStatus, refetchBookings,
   } = useBookings(date)
+
+  // Для раздела «Список броней» — все предстоящие брони (любые даты).
+  const { bookings: allBookings, refetch: refetchAll } = useAllBookings(view === 'list')
 
   // Составные столы (группы).
   const { groups, createGroup, removeGroup } = useTableGroups(true)
@@ -70,23 +74,23 @@ export default function FloorPlan({ isAdmin }) {
   // иначе при «приостановленных обновлениях» нажатие выглядит как «не работает»).
   const handleSetStatus = async (booking, status, reason) => {
     const res = await setBookingStatus(booking, status, reason)
-    if (!res?.error) { refetchBookings() }
+    if (!res?.error) { refetchBookings(); refetchAll() }
     return res
   }
   const handleDelete = async (booking) => {
     const res = await deleteBooking(booking)
-    if (!res?.error) { refetchBookings() }
+    if (!res?.error) { refetchBookings(); refetchAll() }
     return res
   }
-  // Добавление/редактирование тоже обновляют список сразу (не ждём realtime).
+  // Добавление/редактирование тоже обновляют списки сразу (не ждём realtime).
   const handleAdd = async (payload) => {
     const res = await addBooking(payload)
-    if (!res?.error) { refetchBookings() }
+    if (!res?.error) { refetchBookings(); refetchAll() }
     return res
   }
   const handleUpdate = async (booking, fields) => {
     const res = await updateBooking(booking, fields)
-    if (!res?.error) { refetchBookings() }
+    if (!res?.error) { refetchBookings(); refetchAll() }
     return res
   }
 
@@ -115,12 +119,6 @@ export default function FloorPlan({ isAdmin }) {
 
   const bookingsFor = (tableId) =>
     bookings.filter((b) => b.table_id === tableId)
-
-  // Тап по брони в списке — открываем её стол для управления (статус/правка).
-  const openBooking = (b) => {
-    const t = tables.find((x) => x.id === b.table_id)
-    if (t) setActiveTable(t)
-  }
 
   // Для раскраски/счётчика на столе учитываем только активные брони
   // (отменённые освобождают стол).
@@ -175,41 +173,39 @@ export default function FloorPlan({ isAdmin }) {
 
       <div className="view-switch">
         <button
-          className={`view-tab ${view === 'list' ? 'active' : ''}`}
-          onClick={() => setView('list')}
-        >
-          Список
-        </button>
-        <button
           className={`view-tab ${view === 'plan' ? 'active' : ''}`}
           onClick={() => setView('plan')}
         >
           Схема зала
         </button>
+        <button
+          className={`view-tab ${view === 'list' ? 'active' : ''}`}
+          onClick={() => setView('list')}
+        >
+          Список броней
+        </button>
       </div>
 
       <div className="legend">
-        {view === 'plan' && (
-          <>
-            <span><i className="dot free" /> Свободно</span>
-            <span><i className="dot booked" /> Забронировано</span>
-          </>
-        )}
+        <span><i className="dot free" /> Свободно</span>
+        <span><i className="dot booked" /> Забронировано</span>
         <span className={`rt-status ${rt.cls}`} title={rt.text}>
           <i className="rt-dot" /> {rt.text}
         </span>
       </div>
 
-      <div className="day-summary">
-        {activeToday.length > 0
-          ? `Броней: ${activeToday.length} · гостей: ${guestsToday}`
-          : 'На этот день броней нет'}
-        {isAdmin && view === 'plan' && (
-          <button className="link-btn inline" onClick={() => setGroupsOpen(true)}>
-            Составные столы
-          </button>
-        )}
-      </div>
+      {view === 'plan' && tables.length > 0 && (
+        <div className="day-summary">
+          {activeToday.length > 0
+            ? `Броней: ${activeToday.length} · гостей: ${guestsToday}`
+            : 'На этот день броней нет'}
+          {isAdmin && (
+            <button className="link-btn inline" onClick={() => setGroupsOpen(true)}>
+              Составные столы
+            </button>
+          )}
+        </div>
+      )}
 
       {view === 'plan' && tables.length > 0 && (
         <>
@@ -292,16 +288,11 @@ export default function FloorPlan({ isAdmin }) {
           </div>
         </div>
       ) : (
-        <>
-          <button className="btn-primary quick-add" onClick={() => setQuickOpen(true)}>
-            ＋ Записать бронь
-          </button>
-          <BookingsList
-            bookings={bookings}
-            tables={tables}
-            onSelect={openBooking}
-          />
-        </>
+        <BookingsList
+          bookings={allBookings}
+          tables={tables}
+          onSelect={(booking) => setDetailBooking(booking)}
+        />
       )}
 
       {activeTable && (
@@ -324,13 +315,17 @@ export default function FloorPlan({ isAdmin }) {
         />
       )}
 
-      {quickOpen && (
-        <QuickBookingModal
-          date={date}
-          tables={placedTables}
-          bookings={bookings}
-          onClose={() => setQuickOpen(false)}
-          onAdd={handleAdd}
+      {detailBooking && (
+        <BookingDetails
+          // Берём самую свежую версию из списка (статус мог измениться),
+          // с откатом на исходный снимок, если бронь пропала из выборки.
+          booking={allBookings.find((b) => b.id === detailBooking.id) || detailBooking}
+          tableNumber={tables.find((t) => t.id === detailBooking.table_id)?.number ?? '—'}
+          partyTables={partyTableMap(allBookings, tables)[detailBooking.party_id]}
+          isAdmin={isAdmin}
+          onClose={() => setDetailBooking(null)}
+          onSetStatus={handleSetStatus}
+          onDelete={handleDelete}
         />
       )}
 
