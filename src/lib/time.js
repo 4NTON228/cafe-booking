@@ -16,16 +16,6 @@ export function timeRange(startTime, durationMin) {
   return `${startTime.slice(0, 5)}–${endTime(startTime, durationMin)}`
 }
 
-// Длительность в минутах из времени начала и конца.
-// Если конец раньше или равен началу — считаем, что бронь через полночь.
-export function durationFromTimes(start, end) {
-  const [sh, sm] = start.split(':').map(Number)
-  const [eh, em] = end.split(':').map(Number)
-  let diff = (eh * 60 + em) - (sh * 60 + sm)
-  if (diff <= 0) diff += 1440
-  return diff
-}
-
 // Когда бронь была создана сотрудником: дата + время.
 export function formatCreated(ts) {
   if (!ts) return ''

@@ -749,22 +749,6 @@ h1, h2, h3 {
 .error-screen { flex-direction: column; gap: 14px; padding: 24px; text-align: center; }
 .error-screen p { color: var(--muted); max-width: 320px; margin: 0; }
 
-/* Крупная кнопка быстрой брони над списком */
-.quick-add {
-  width: 100%;
-  font-size: 17px;
-  padding: 15px;
-  margin-bottom: 14px;
-}
-
-/* Свёрнутые необязательные поля формы («Ещё») */
-.more-toggle { display: inline-block; margin: 4px 0 2px; }
-.more-fields {
-  margin-top: 6px;
-  padding-top: 10px;
-  border-top: 1px dashed var(--line);
-}
-
 /* Выбор столов при создании группы */
 .table-picker { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
 .table-pick {
